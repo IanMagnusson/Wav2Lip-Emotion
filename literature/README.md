@@ -22,3 +22,7 @@ unrealistically have to generate pose changes at test time
 ### [The Socio-Moral Image Database (SMID): A novel stimulus set for the study of social, moral and affective processes](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190954) Crone et al 2018
 - 2,941 freely available photographic images
 - annoted for valence, arousal, and various moral theory metrics 
+
+### [EmoSen: Generating Sentiment and Emotion Controlled Responses in a Multimodal Dialogue System](https://ieeexplore.ieee.org/document/9165162) Firdaus et al 2020
+- Sentiment and Emotion Multimodal Dialogue Dataset of 10 tv shows annotated (at sentence level?) for sentiment and emotion
+- not yet available because journal hasn't been published!
