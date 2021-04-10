@@ -7,6 +7,12 @@
 - propose a new evaluation approach using the pretrained expert model rather than using masked real data which requires model to also
 unrealistically have to generate pose changes at test time
 
+## Temporal Consistency / Video-to-Video
+
+### [World-Consistent Video-to-Video Synthesis](https://arxiv.org/pdf/2007.08509.pdf) Mallya et al 2020
+- recent work from NVIDA on "world consistency" which is some kind of fancy long range temporal consistency
+- TODO: mine related works section for recent work on ordinary temporal consistency
+
 ## Deepfake Detection
 
 ### [DeepFakes and Beyond: A Survey of Face Manipulation and Fake Detection](Tolosana2020Deepfakes.pdf) Tolosana et al 2020
