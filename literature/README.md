@@ -25,6 +25,16 @@ unrealistically have to generate pose changes at test time
 
 ## Datasets
 
+## [CMU-MOSEI Dataset](http://multicomp.cs.cmu.edu/resources/cmu-mosei-dataset/) Zadeh et al 2018
+- emotion labeled videos in the wild (from youtube)
+- labeled by crowd workers at the sentence level
+- also contains visemes and sentiment
+
+## [MEAD: A Large-scale Audio-visual Dataset for Emotional Talking-face Generation](https://wywu.github.io/projects/MEAD/MEAD.html) Wang et al 2020
+- largest controled emotion video dataset
+- 60 actors each with about 40 mins recoreded over 8 emotions and multiple viewing angles
+- TODO figure out what the number of emotion annotions per video is (probably not sentnece level)
+
 ### [The Socio-Moral Image Database (SMID): A novel stimulus set for the study of social, moral and affective processes](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0190954) Crone et al 2018
 - 2,941 freely available photographic images
 - annoted for valence, arousal, and various moral theory metrics 
