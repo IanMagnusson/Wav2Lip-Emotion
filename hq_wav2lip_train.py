@@ -206,10 +206,11 @@ def get_affect_loss(window):
     affect_loss = 0
     with torch.no_grad():
       for frame in window:
+          print(frame)
           logits = model_ft(frame.unsqueeze(0))
           probs = F.softmax(logits.squeeze(), dim = 0)
           probs, preds = probs.topk(len(probs))\
-          affect_loss += probs[0]
+          affect_loss += probs[list(preds).index(3)]
     return affect_loss
 
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
@@ -245,14 +246,14 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
             if hparams.disc_wt > 0.:
                 perceptual_loss = disc.perceptual_forward(g)
+                running_disc_affect_happy_loss = affect_loss(g)
             else:
                 perceptual_loss = 0.
+                running_disc_affect_happy_loss = 0.
 
             l1loss = recon_loss(g, gt)
 
-            running_disc_affect_happy_loss = affect_loss(g)
-
-            loss = hparams.syncnet_wt * sync_loss + hparams.disc_wt * perceptual_loss + \
+            loss = hparams.syncnet_wt * sync_loss + hparams.disc_wt * (perceptual_loss + running_disc_affect_happy_loss) + \
                                     (1. - hparams.syncnet_wt - hparams.disc_wt) * l1loss
 
             loss.backward()
