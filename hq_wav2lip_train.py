@@ -2,6 +2,7 @@ from os.path import dirname, join, basename, isfile
 from tqdm import tqdm
 
 from models import SyncNet_color as SyncNet
+from models import affect_net
 from models import Wav2Lip, Wav2Lip_disc_qual
 import audio
 
@@ -80,7 +81,7 @@ class Dataset(object):
         else:
             start_frame_num = self.get_frame_id(start_frame)
         start_idx = int(80. * (start_frame_num / float(hparams.fps)))
-        
+
         end_idx = start_idx + syncnet_mel_step_size
 
         return spec[start_idx : end_idx, :]
@@ -117,7 +118,7 @@ class Dataset(object):
             img_names = list(glob(join(vidname, '*.jpg')))
             if len(img_names) <= 3 * syncnet_T:
                 continue
-            
+
             img_name = random.choice(img_names)
             wrong_img_name = random.choice(img_names)
             while wrong_img_name == img_name:
@@ -145,7 +146,7 @@ class Dataset(object):
                 continue
 
             mel = self.crop_audio_window(orig_mel.copy(), img_name)
-            
+
             if (mel.shape[0] != syncnet_mel_step_size):
                 continue
 
@@ -199,6 +200,18 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
+affectnet = affect_net().eval()
+
+def get_affect_loss(window):
+    affect_loss = 0
+    with torch.no_grad():
+      for frame in window:
+          logits = model_ft(frame.unsqueeze(0))
+          probs = F.softmax(logits.squeeze(), dim = 0)
+          probs, preds = probs.topk(len(probs))\
+          affect_loss += probs[0]
+    return affect_loss
+
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):
     global global_step, global_epoch
@@ -208,6 +221,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
         print('Starting Epoch: {}'.format(global_epoch))
         running_sync_loss, running_l1_loss, disc_loss, running_perceptual_loss = 0., 0., 0., 0.
         running_disc_real_loss, running_disc_fake_loss = 0., 0.
+        running_disc_affect_happy_loss = 0.
         prog_bar = tqdm(enumerate(train_data_loader))
         for step, (x, indiv_mels, mel, gt) in prog_bar:
             disc.train()
@@ -218,7 +232,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             indiv_mels = indiv_mels.to(device)
             gt = gt.to(device)
 
-            ### Train generator now. Remove ALL grads. 
+            ### Train generator now. Remove ALL grads.
             optimizer.zero_grad()
             disc_optimizer.zero_grad()
 
@@ -235,6 +249,8 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 perceptual_loss = 0.
 
             l1loss = recon_loss(g, gt)
+
+            running_disc_affect_happy_loss = affect_loss(g)
 
             loss = hparams.syncnet_wt * sync_loss + hparams.disc_wt * perceptual_loss + \
                                     (1. - hparams.syncnet_wt - hparams.disc_wt) * l1loss
@@ -322,7 +338,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
             running_disc_fake_loss.append(disc_fake_loss.item())
 
             sync_loss = get_sync_loss(mel, g)
-            
+
             if hparams.disc_wt > 0.:
                 perceptual_loss = disc.perceptual_forward(g)
             else:
@@ -335,7 +351,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
 
             running_l1_loss.append(l1loss.item())
             running_sync_loss.append(sync_loss.item())
-            
+
             if hparams.disc_wt > 0.:
                 running_perceptual_loss.append(perceptual_loss.item())
             else:
@@ -427,10 +443,10 @@ if __name__ == "__main__":
         load_checkpoint(args.checkpoint_path, model, optimizer, reset_optimizer=False)
 
     if args.disc_checkpoint_path is not None:
-        load_checkpoint(args.disc_checkpoint_path, disc, disc_optimizer, 
+        load_checkpoint(args.disc_checkpoint_path, disc, disc_optimizer,
                                 reset_optimizer=False, overwrite_global_states=False)
-        
-    load_checkpoint(args.syncnet_checkpoint_path, syncnet, None, reset_optimizer=True, 
+
+    load_checkpoint(args.syncnet_checkpoint_path, syncnet, None, reset_optimizer=True,
                                 overwrite_global_states=False)
 
     if not os.path.exists(checkpoint_dir):
