@@ -28,14 +28,16 @@ parser.add_argument("--data_root", help="Root folder of the LRS2 dataset", requi
 parser.add_argument("--preprocessed_root", help="Root folder of the preprocessed dataset", required=True)
 
 args = parser.parse_args()
+args.ngpu = [2, 7]
 
 fa = [face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, 
-									device='cuda:{}'.format(id)) for id in range(args.ngpu)]
+									device='cuda:{}'.format(id)) for id in args.ngpu ]
 
 template = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'
 # template2 = 'ffmpeg -hide_banner -loglevel panic -threads 1 -y -i {} -async 1 -ac 1 -vn -acodec pcm_s16le -ar 16000 {}'
 
 def process_video_file(vfile, args, gpu_id):
+	print('process_video_file', vfile, args, gpu_id)
 	video_stream = cv2.VideoCapture(vfile)
 	
 	frames = []
@@ -45,7 +47,7 @@ def process_video_file(vfile, args, gpu_id):
 			video_stream.release()
 			break
 		frames.append(frame)
-	
+
 	vidname = os.path.basename(vfile).split('.')[0]
 	dirname = vfile.split('/')[-2]
 
@@ -91,10 +93,9 @@ def mp_handler(job):
 def main(args):
 	print('Started processing for {} with {} GPUs'.format(args.data_root, args.ngpu))
 
-	filelist = glob(path.join(args.data_root, '*/*.mp4'))
-
-	jobs = [(vfile, args, i%args.ngpu) for i, vfile in enumerate(filelist)]
-	p = ThreadPoolExecutor(args.ngpu)
+	filelist = glob(path.join(args.data_root, '*.mp4'))
+	jobs = [(vfile, args, i % len(args.ngpu)) for i, vfile in enumerate(filelist)]
+	p = ThreadPoolExecutor(len(args.ngpu))
 	futures = [p.submit(mp_handler, j) for j in jobs]
 	_ = [r.result() for r in tqdm(as_completed(futures), total=len(futures))]
 
