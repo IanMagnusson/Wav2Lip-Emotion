@@ -30,6 +30,9 @@ class AffectObjective(nn.Module):
 
         self.input_transform = transforms.Compose([
             transforms.ToPILImage(mode=None), # todo confirm that mode should be none or find a way to run transforms w/o conversion
+
+            # color space and pixel depth of input data (optional). If mode is None (default) there are some assumptions made about the input data: 1. If the input has 3 channels, the mode is assumed to be RGB. 2. If the input has 4 channels, the mode is assumed to be RGBA. 3. If the input has 1 channel, the mode is determined by the data type (i,e, int, float, short).
+
             transforms.Resize(self.INPUT_SIZE),
             transforms.CenterCrop(self.INPUT_SIZE),
             transforms.Grayscale(num_output_channels=3),
