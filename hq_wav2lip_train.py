@@ -2,7 +2,7 @@ from os.path import dirname, join, basename, isfile
 from tqdm import tqdm
 
 from models import SyncNet_color as SyncNet
-from models import affect_net
+from models import AffectObjective
 from models import Wav2Lip, Wav2Lip_disc_qual
 import audio
 
@@ -28,6 +28,8 @@ parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expe
 
 parser.add_argument('--checkpoint_path', help='Resume generator from this checkpoint', default=None, type=str)
 parser.add_argument('--disc_checkpoint_path', help='Resume quality disc from this checkpoint', default=None, type=str)
+
+parser.add_argument('--affect_checkpoint_path', help='Load the pre-trained affect objective', required=True, type=str)
 
 args = parser.parse_args()
 
@@ -200,18 +202,20 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-affectnet = affect_net().eval()
-
-def get_affect_loss(window):
-    affect_loss = 0
+affect_objective = AffectObjective(args.affect_checkpoint_path, desired_affect=3).eval()
+def get_affect_loss(X):
+    """
+    :param X: A tensor ([batch, channels, ???,  height, width]) of cropped face images TODO figure out mystery dim
+    :return: A tensor ([batch]) of the desired class logit for each image
+    """
+    X = X.permute(0,2,1,3,4).clone()
+    # X = X.view(-1, *X.shape[2:]) # merge ??? and batch
+    X = X.view(-1, 3, 96, 96) # todo do this properly
     with torch.no_grad():
-      for frame in window:
-          print(frame)
-          logits = model_ft(frame.unsqueeze(0))
-          probs = F.softmax(logits.squeeze(), dim = 0)
-          probs, preds = probs.topk(len(probs))\
-          affect_loss += probs[list(preds).index(3)]
-    return affect_loss
+        desired_likelihoods = affect_objective(X)   # desired_likelihoods ([batch X ???])
+        affect_loss = 1 - desired_likelihoods        # affect_loss ([batch X ???])
+        avg_affect_loss = affect_loss.mean()        # avg_affect_loss ([])
+    return avg_affect_loss
 
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):
@@ -222,7 +226,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
         print('Starting Epoch: {}'.format(global_epoch))
         running_sync_loss, running_l1_loss, disc_loss, running_perceptual_loss = 0., 0., 0., 0.
         running_disc_real_loss, running_disc_fake_loss = 0., 0.
-        running_disc_affect_happy_loss = 0.
+        running_affect_loss = 0.
         prog_bar = tqdm(enumerate(train_data_loader))
         for step, (x, indiv_mels, mel, gt) in prog_bar:
             disc.train()
@@ -246,15 +250,21 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
             if hparams.disc_wt > 0.:
                 perceptual_loss = disc.perceptual_forward(g)
-                running_disc_affect_happy_loss = affect_loss(g)
             else:
                 perceptual_loss = 0.
-                running_disc_affect_happy_loss = 0.
+
+            if hparams.affect_wt > 0.:
+                affect_loss = get_affect_loss(g)
+            else:
+                affect_loss = 0.
+
 
             l1loss = recon_loss(g, gt)
 
-            loss = hparams.syncnet_wt * sync_loss + hparams.disc_wt * (perceptual_loss + running_disc_affect_happy_loss) + \
-                                    (1. - hparams.syncnet_wt - hparams.disc_wt) * l1loss
+            loss = hparams.syncnet_wt * sync_loss + \
+                   hparams.disc_wt * perceptual_loss + \
+                   (1. - hparams.syncnet_wt - hparams.disc_wt) * l1loss + \
+                   hparams.affect_wt * affect_loss
 
             loss.backward()
             optimizer.step()
@@ -293,6 +303,11 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             else:
                 running_perceptual_loss += 0.
 
+            if hparams.affect_wt > 0.:
+                running_affect_loss += affect_loss.item()
+            else:
+                running_affect_loss += 0.
+
             if global_step == 1 or global_step % checkpoint_interval == 0:
                 save_checkpoint(
                     model, optimizer, global_step, checkpoint_dir, global_epoch)
@@ -306,11 +321,15 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                     if average_sync_loss < .75:
                         hparams.set_hparam('syncnet_wt', 0.03)
 
-            prog_bar.set_description('L1: {}, Sync: {}, Percep: {} | Fake: {}, Real: {}'.format(running_l1_loss / (step + 1),
-                                                                                        running_sync_loss / (step + 1),
-                                                                                        running_perceptual_loss / (step + 1),
-                                                                                        running_disc_fake_loss / (step + 1),
-                                                                                        running_disc_real_loss / (step + 1)))
+            prog_bar.set_description('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
+                    running_l1_loss / (step + 1),
+                    running_sync_loss / (step + 1),
+                    running_perceptual_loss / (step + 1),
+                    running_affect_loss / (step + 1),
+                    running_disc_fake_loss / (step + 1),
+                    running_disc_real_loss / (step + 1)
+                )
+            )
 
         global_epoch += 1
 
