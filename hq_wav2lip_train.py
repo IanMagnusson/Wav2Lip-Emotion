@@ -209,13 +209,17 @@ def get_affect_loss(X):
     :return: A tensor ([batch]) of the desired class logit for each image
     """
     X = X.permute(0,2,1,3,4).clone()
-    # X = X.view(-1, *X.shape[2:]) # merge ??? and batch
-    X = X.view(-1, 3, 96, 96) # todo do this properly
-    with torch.no_grad():
-        desired_likelihoods = affect_objective(X)   # desired_likelihoods ([batch X ???])
-        affect_loss = 1 - desired_likelihoods        # affect_loss ([batch X ???])
-        avg_affect_loss = affect_loss.mean()        # avg_affect_loss ([])
-    return avg_affect_loss
+    X = X.view(-1, *X.shape[2:]) # merge ??? and batch
+    # X = X.view(-1, 3, 96, 96) # todo do this properly
+
+    affect_losses = []
+    for image_idx in range(X.shape[0]):
+        X_i = X[image_idx]
+        with torch.no_grad():
+            desired_likelihoods = affect_objective(X_i)   # desired_likelihoods ([batch X ???])
+            affect_loss = 1 - desired_likelihoods     # affect_loss ([batch X ???])
+            affect_losses.append(affect_loss)       # avg_affect_loss ([])
+    return sum(affect_losses) / len(affect_losses)
 
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):

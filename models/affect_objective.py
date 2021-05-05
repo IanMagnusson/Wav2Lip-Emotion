@@ -39,14 +39,14 @@ class AffectObjective(nn.Module):
 
     def forward(self, X):
         """
-        :param X: A tensor ([batch, channels, height, width]) of cropped face images
-        :return: A tensor ([batch]) of the desired class likelihood for each image
+        :param X: A tensor ([channels, height, width]) of a cropped face image
+        :return: A tensor ([]) of the desired class likelihood of the image
         """
 
-        X_transformed = self.input_transform(X)                     # X_transformed ([batch, channels, height, width])
-        logits = self.model(X_transformed)                          # logits ([batch, classes])
-        likelihoods = F.softmax(logits, dim=1)                      # likelihoods ([batch, classes])
-        desired_likelihoods = likelihoods[:,self.desired_affect]    # desired_likelihoods ([batch])
+        X_transformed = self.input_transform(X)                     # X_transformed ([channels, height, width])
+        logits = self.model(X_transformed.unsqueeze(0))                          # logits ([classes])
+        likelihoods = F.softmax(logits.squeeze(0), dim=0)                      # likelihoods ([classes])
+        desired_likelihoods = likelihoods[self.desired_affect]    # desired_likelihoods ([])
 
         return desired_likelihoods
 
