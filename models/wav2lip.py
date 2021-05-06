@@ -169,7 +169,7 @@ class Wav2Lip_disc_qual(nn.Module):
             false_feats = f(false_feats)
 
         false_pred_loss = F.binary_cross_entropy(self.binary_pred(false_feats).view(len(false_feats), -1), 
-                                        torch.ones((len(false_feats), 1))).to('cuda:1' if torch.cuda.is_available() else 'cpu')
+                                        torch.ones((len(false_feats), 1)).to('cuda:1' if torch.cuda.is_available() else 'cpu'))
 
         return false_pred_loss
 
