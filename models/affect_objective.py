@@ -28,6 +28,10 @@ class AffectObjective(nn.Module):
 
         self.model.load_state_dict(torch.load(pretrain_path, map_location='cpu')['net']) #TODO make this adapt to the device
 
+        # like on syncnet we only need gradients wrt the inputs not wrt the parameters so I think this saves compute
+        for p in self.model.parameters():
+            p.requires_grad = False
+
         self.input_transform = transforms.Compose([
             transforms.ToPILImage(mode=None), # todo confirm that mode should be none or find a way to run transforms w/o conversion
 

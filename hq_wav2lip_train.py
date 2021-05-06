@@ -215,10 +215,9 @@ def get_affect_loss(X):
     affect_losses = []
     for image_idx in range(X.shape[0]):
         X_i = X[image_idx]
-        with torch.no_grad():
-            desired_likelihoods = affect_objective(X_i)   # desired_likelihoods ([batch X ???])
-            affect_loss = 1 - desired_likelihoods     # affect_loss ([batch X ???])
-            affect_losses.append(affect_loss)       # avg_affect_loss ([])
+        desired_likelihoods = affect_objective(X_i)   # desired_likelihoods ([batch X ???])
+        affect_loss = 1 - desired_likelihoods     # affect_loss ([batch X ???])
+        affect_losses.append(affect_loss)       # avg_affect_loss ([])
     return sum(affect_losses) / len(affect_losses)
 
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
