@@ -210,7 +210,7 @@ def get_affect_loss(X):
     """
 
     # merge temporal and batch
-    X = X.permute(0, 2, 1, 3, 4).clone()
+    X = X.permute(0, 2, 1, 3, 4).clone().to('cuda:1' if use_cuda else 'cpu')
     X = X.view(-1, *X.shape[2:])
 
     desired_likelihoods = affect_objective(X)   # desired_likelihoods ([batch X ???])

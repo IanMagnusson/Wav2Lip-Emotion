@@ -40,7 +40,7 @@ class AffectObjective(nn.Module):
         num_ftrs = self.model.classifier.in_features
         device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
         if torch.cuda.is_available():
-            self.model.cuda(1)
+            self.model.to('cuda:1')
 
         self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT))
 
