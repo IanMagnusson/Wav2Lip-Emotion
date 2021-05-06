@@ -6,8 +6,8 @@ from torchvision import models, transforms
 def diferentiable_greyscale(X):
     """
     Inspired by https://kornia.readthedocs.io/en/latest/_modules/kornia/color/gray.html#rgb_to_grayscale
-    :param X: A tensor ([channels, height, width]) of a cropped face image in color
-    :return: A tensor ([channels, height, width]) of a cropped face image in greyscale
+    :param X: A tensor ([..., channels, height, width]) of a cropped face image in color
+    :return: A tensor ([..., channels, height, width]) of a cropped face image in greyscale
     """
     rgb_weights = torch.tensor([0.299, 0.587, 0.114]).to(X.device, X.dtype)
     rgb_weights = rgb_weights.view(-1, 1, 1)    # A tensor ([channels, height, width])
