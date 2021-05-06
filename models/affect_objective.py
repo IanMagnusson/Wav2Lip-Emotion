@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 
+CUDA_VISIBLE_DEVICES=1
+
 class AffectObjective(nn.Module):
     EMOTION_DICT = {
         0: "angry",
@@ -24,9 +26,13 @@ class AffectObjective(nn.Module):
 
         self.model = models.densenet121()
         num_ftrs = self.model.classifier.in_features
+        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.model.cuda(1)
+
         self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT))
 
-        self.model.load_state_dict(torch.load(pretrain_path, map_location='cpu')['net']) #TODO make this adapt to the device
+        self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net']) #TODO make this adapt to the device
 
         # like on syncnet we only need gradients wrt the inputs not wrt the parameters so I think this saves compute
         for p in self.model.parameters():
@@ -49,9 +55,12 @@ class AffectObjective(nn.Module):
         :param X: A tensor ([channels, height, width]) of a cropped face image
         :return: A tensor ([]) of the desired class likelihood of the image
         """
-
-        X_transformed = self.input_transform(X)                     # X_transformed ([channels, height, width])
-        logits = self.model(X_transformed.unsqueeze(0))                          # logits ([classes])
+        
+        X_transformed = self.input_transform(X.cpu().detach())
+        X_transformed = X_transformed.to('cuda:1')
+#        X_PIL = transforms.functional.to_pil_image(X.cpu().detach(), mode=None).to('cuda:1')
+        #X_transformed = self.input_transform(X)
+        logits = self.model(X_transformed.unsqueeze(0)) 
         likelihoods = F.softmax(logits.squeeze(0), dim=0)                      # likelihoods ([classes])
         desired_likelihoods = likelihoods[self.desired_affect]    # desired_likelihoods ([])
 

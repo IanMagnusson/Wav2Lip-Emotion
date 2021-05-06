@@ -188,7 +188,7 @@ def cosine_loss(a, v, y):
 
     return loss
 
-device = torch.device("cuda" if use_cuda else "cpu")
+device = torch.device("cuda:1" if use_cuda else "cpu")
 syncnet = SyncNet().to(device)
 for p in syncnet.parameters():
     p.requires_grad = False
@@ -448,7 +448,7 @@ if __name__ == "__main__":
         test_dataset, batch_size=hparams.batch_size,
         num_workers=4)
 
-    device = torch.device("cuda" if use_cuda else "cpu")
+    device = torch.device("cuda:1" if use_cuda else "cpu")
 
      # Model
     model = Wav2Lip().to(device)
