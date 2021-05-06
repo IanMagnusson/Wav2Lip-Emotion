@@ -205,20 +205,18 @@ def get_sync_loss(mel, g):
 affect_objective = AffectObjective(args.affect_checkpoint_path, desired_affect=3).eval()
 def get_affect_loss(X):
     """
-    :param X: A tensor ([batch, channels, ???,  height, width]) of cropped face images TODO figure out mystery dim
+    :param X: A tensor ([batch, channels, temporal, height, width]) of cropped face images TODO figure out mystery dim
     :return: A tensor ([batch]) of the desired class logit for each image
     """
-    X = X.permute(0,2,1,3,4).clone()
-    X = X.view(-1, *X.shape[2:]) # merge ??? and batch
-    # X = X.view(-1, 3, 96, 96) # todo do this properly
 
-    affect_losses = []
-    for image_idx in range(X.shape[0]):
-        X_i = X[image_idx]
-        desired_likelihoods = affect_objective(X_i)   # desired_likelihoods ([batch X ???])
-        affect_loss = 1 - desired_likelihoods     # affect_loss ([batch X ???])
-        affect_losses.append(affect_loss)       # avg_affect_loss ([])
-    return sum(affect_losses) / len(affect_losses)
+    # merge temporal and batch
+    X = X.permute(0, 2, 1, 3, 4).clone()
+    X = X.view(-1, *X.shape[2:])
+
+    desired_likelihoods = affect_objective(X)   # desired_likelihoods ([batch X ???])
+    affect_loss = 1 - desired_likelihoods     # affect_loss ([batch X ???])
+    avg_affect_loss = affect_loss.mean()       # avg_affect_loss ([])
+    return avg_affect_loss
 
 def train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
           checkpoint_dir=None, checkpoint_interval=None, nepochs=None):

@@ -3,6 +3,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models, transforms
 
+def diferentiable_greyscale(X):
+    """
+    Inspired by https://kornia.readthedocs.io/en/latest/_modules/kornia/color/gray.html#rgb_to_grayscale
+    :param X: A tensor ([channels, height, width]) of a cropped face image in color
+    :return: A tensor ([channels, height, width]) of a cropped face image in greyscale
+    """
+    rgb_weights = torch.tensor([0.299, 0.587, 0.114]).to(X.device, X.dtype)
+    rgb_weights = rgb_weights.view(-1, 1, 1)    # A tensor ([channels, height, width])
+    X_grey = torch.sum(X * rgb_weights, dim=-3) # A tensor ([height, width])
+    X_grey_3c = torch.stack([X_grey] * 3, dim=-3)
+    return X_grey_3c
+
 CUDA_VISIBLE_DEVICES=1
 
 class AffectObjective(nn.Module):
@@ -32,37 +44,23 @@ class AffectObjective(nn.Module):
 
         self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT))
 
-        self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net']) #TODO make this adapt to the device
+        self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net'])
 
         # like on syncnet we only need gradients wrt the inputs not wrt the parameters so I think this saves compute
         for p in self.model.parameters():
             p.requires_grad = False
-
-        self.input_transform = transforms.Compose([
-            transforms.ToPILImage(mode=None), # todo confirm that mode should be none or find a way to run transforms w/o conversion
-
-            # color space and pixel depth of input data (optional). If mode is None (default) there are some assumptions made about the input data: 1. If the input has 3 channels, the mode is assumed to be RGB. 2. If the input has 4 channels, the mode is assumed to be RGBA. 3. If the input has 1 channel, the mode is determined by the data type (i,e, int, float, short).
-
-            transforms.Resize(self.INPUT_SIZE),
-            transforms.CenterCrop(self.INPUT_SIZE),
-            transforms.Grayscale(num_output_channels=3),
-            # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]), TODO confirm if this pretrained densenet requires normalization
-            transforms.ToTensor()
-        ])
 
     def forward(self, X):
         """
         :param X: A tensor ([channels, height, width]) of a cropped face image
         :return: A tensor ([]) of the desired class likelihood of the image
         """
-        
-        X_transformed = self.input_transform(X.cpu().detach())
-        X_transformed = X_transformed.to('cuda:1')
-#        X_PIL = transforms.functional.to_pil_image(X.cpu().detach(), mode=None).to('cuda:1')
-        #X_transformed = self.input_transform(X)
-        logits = self.model(X_transformed.unsqueeze(0)) 
-        likelihoods = F.softmax(logits.squeeze(0), dim=0)                      # likelihoods ([classes])
-        desired_likelihoods = likelihoods[self.desired_affect]    # desired_likelihoods ([])
+
+        X_grey = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
+        X_resized = F.interpolate(X_grey, self.INPUT_SIZE)      # todo experiment with interp modes
+        logits = self.model(X_resized)                          # logits ([batch X temporal, classes])
+        likelihoods = F.softmax(logits.squeeze(0), dim=-1)      # likelihoods ([classes])
+        desired_likelihoods = likelihoods[...,self.desired_affect]  # desired_likelihoods ([])
 
         return desired_likelihoods
 
