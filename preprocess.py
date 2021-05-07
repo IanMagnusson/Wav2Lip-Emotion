@@ -28,7 +28,7 @@ parser.add_argument("--data_root", help="Root folder of the LRS2 dataset", requi
 parser.add_argument("--preprocessed_root", help="Root folder of the preprocessed dataset", required=True)
 
 args = parser.parse_args()
-args.ngpu = [2, 7]
+args.ngpu = [1,2,3]
 
 fa = [face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, 
 									device='cuda:{}'.format(id)) for id in args.ngpu ]

@@ -202,7 +202,7 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-affect_objective = AffectObjective(args.affect_checkpoint_path, desired_affect=3).eval()
+affect_objective = AffectObjective(args.affect_checkpoint_path, desired_affect=4).eval()
 def get_affect_loss(X):
     """
     :param X: A tensor ([batch, channels, temporal, height, width]) of cropped face images TODO figure out mystery dim
