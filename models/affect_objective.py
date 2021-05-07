@@ -42,7 +42,7 @@ class AffectObjective(nn.Module):
         if torch.cuda.is_available():
             self.model.to('cuda:1')
 
-        self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT))
+        self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT)).to(device)
 
         self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net'])
 
