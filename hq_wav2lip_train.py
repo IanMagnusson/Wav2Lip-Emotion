@@ -13,6 +13,12 @@ from torch import optim
 import torch.backends.cudnn as cudnn
 from torch.utils import data as data_utils
 import numpy as np
+from imutils import face_utils
+import dlib
+import skimage
+from skimage.draw import polygon
+import scipy
+from scipy.spatial import ConvexHull
 
 from glob import glob
 
@@ -103,6 +109,28 @@ class Dataset(object):
 
         return mels
 
+    def set_face_zero(self, window):
+        masked_face = []
+        for w in window:
+            p = "shape_predictor_81_face_landmarks.dat"
+            detector = dlib.get_frontal_face_detector()
+            predictor = dlib.shape_predictor(p)
+
+            rect = detector(w)[0]
+            sp = predictor(w, rect)
+            landmarks = np.array([[p.x, p.y] for p in sp.parts()])
+            mask_outline_landmarks = landmarks[[*range(17), 78, 74, 79, 73, 72, 80, 71, 70, 69, 68, 76, 75, 77]]
+            Y, X = skimage.draw.polygon(mask_outline_landmarks[:,1], mask_outline_landmarks[:,0])
+            Y[Y >= w.shape[0]] = w.shape[0] - 1
+            X[X >= w.shape[1]] = w.shape[1] - 1
+            cropped_img = np.zeros(w.shape, dtype=np.uint8)
+            cropped_img[Y, X] = w[Y, X]
+            final = cv2.subtract(w, cropped_img)
+            masked_face.append(cv2.cvtColor(final, cv2.COLOR_BGR2RGB))
+
+        return masked_face
+
+
     def prepare_window(self, window):
         # 3 x T x H x W
         x = np.asarray(window) / 255.
@@ -155,9 +183,11 @@ class Dataset(object):
             indiv_mels = self.get_segmented_mels(orig_mel.copy(), img_name)
             if indiv_mels is None: continue
 
-            window = self.prepare_window(window)
+            # set half the window to 0
             y = window.copy()
-            window[:, :, window.shape[2]//2:] = 0.
+            window = self.set_face_zero(window)
+            window = self.prepare_window(window)
+            # window[:, :, window.shape[2]//2:] = 0.
 
             wrong_window = self.prepare_window(wrong_window)
             x = np.concatenate([window, wrong_window], axis=0)
