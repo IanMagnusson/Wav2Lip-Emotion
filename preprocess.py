@@ -17,6 +17,13 @@ from tqdm import tqdm
 from glob import glob
 import audio
 from hparams import hparams as hp
+from imutils import face_utils
+import dlib
+import skimage
+from skimage.draw import polygon
+import scipy
+from scipy.spatial import ConvexHull
+import numpy as np
 
 import face_detection
 
@@ -52,21 +59,44 @@ def process_video_file(vfile, args, gpu_id):
 	dirname = vfile.split('/')[-2]
 
 	fulldir = path.join(args.preprocessed_root, dirname, vidname)
+	maskdir = path.join(args.preprocessed_root, dirname, f'{vidname}-m')
 	os.makedirs(fulldir, exist_ok=True)
+	os.makedirs(maskdir, exist_ok=True)
 
 	batches = [frames[i:i + args.batch_size] for i in range(0, len(frames), args.batch_size)]
-
 	i = -1
 	for fb in batches:
 		preds = fa[gpu_id].get_detections_for_batch(np.asarray(fb))
-
+		masks = set_face_zero(fb)
 		for j, f in enumerate(preds):
 			i += 1
 			if f is None:
 				continue
-
 			x1, y1, x2, y2 = f
 			cv2.imwrite(path.join(fulldir, '{}.jpg'.format(i)), fb[j][y1:y2, x1:x2])
+			cv2.imwrite(path.join(maskdir, '{}.jpg'.format(i)), cv2.cvtColor(masks[j][y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
+
+def set_face_zero(window):
+	masked_face = []
+	for w in window:
+		p = "shape_predictor_81_face_landmarks.dat"
+		detector = dlib.get_frontal_face_detector()
+		predictor = dlib.shape_predictor(p)
+
+		# print(f'W {w.shape}')
+		rect = detector(w)[0]
+		sp = predictor(w, rect)
+		landmarks = np.array([[p.x, p.y] for p in sp.parts()])
+		mask_outline_landmarks = landmarks[[*range(17), 78, 74, 79, 73, 72, 80, 71, 70, 69, 68, 76, 75, 77]]
+		Y, X = skimage.draw.polygon(mask_outline_landmarks[:,1], mask_outline_landmarks[:,0])
+		Y[Y >= w.shape[0]] = w.shape[0] - 1
+		X[X >= w.shape[1]] = w.shape[1] - 1
+		cropped_img = np.zeros(w.shape, dtype=np.uint8)
+		cropped_img[Y, X] = w[Y, X]
+		final = cv2.subtract(w, cropped_img)
+		masked_face.append(cv2.cvtColor(final, cv2.COLOR_BGR2RGB))
+
+	return masked_face
 
 def process_audio_file(vfile, args):
 	vidname = os.path.basename(vfile).split('.')[0]
@@ -80,7 +110,7 @@ def process_audio_file(vfile, args):
 	command = template.format(vfile, wavpath)
 	subprocess.call(command, shell=True)
 
-	
+
 def mp_handler(job):
 	vfile, args, gpu_id = job
 	try:
@@ -89,7 +119,7 @@ def mp_handler(job):
 		exit(0)
 	except:
 		traceback.print_exc()
-		
+
 def main(args):
 	print('Started processing for {} with {} GPUs'.format(args.data_root, args.ngpu))
 
