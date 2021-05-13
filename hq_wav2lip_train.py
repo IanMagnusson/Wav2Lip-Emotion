@@ -13,12 +13,6 @@ from torch import optim
 import torch.backends.cudnn as cudnn
 from torch.utils import data as data_utils
 import numpy as np
-from imutils import face_utils
-import dlib
-import skimage
-from skimage.draw import polygon
-import scipy
-from scipy.spatial import ConvexHull
 
 from glob import glob
 
@@ -49,9 +43,8 @@ syncnet_T = 5
 syncnet_mel_step_size = 16
 
 class Dataset(object):
-    def __init__(self, split, split_mask):
+    def __init__(self, split):
         self.all_videos = get_image_list(args.data_root, split)
-        self.mask_videos = get_image_list(args.data_root, split_mask)
 
     def get_frame_id(self, frame):
         return int(basename(frame).split('.')[0])
@@ -84,6 +77,27 @@ class Dataset(object):
 
         return window
 
+    def read_window_with_mask(self, window_fnames):
+        if window_fnames is None: return None
+        window = []
+        window_masked = []
+        for fname in window_fnames:
+            mask_fname = join(dirname(fname) + '-m', basename(fname))
+            img_mask = cv2.imread(mask_fname)
+            img = cv2.imread(fname)
+            if img is None or img_mask is None:
+                return None, None
+            try:
+                img = cv2.resize(img, (hparams.img_size, hparams.img_size))
+                img_mask = cv2.resize(img_mask, (hparams.img_size, hparams.img_size))
+            except Exception as e:
+                return None, None
+
+            window.append(img)
+            window_masked.append(img_mask)
+
+        return window, window_masked
+
     def crop_audio_window(self, spec, start_frame):
         if type(start_frame) == int:
             start_frame_num = start_frame
@@ -111,7 +125,7 @@ class Dataset(object):
         return mels
 
     def prepare_window(self, window):
-        # 3 x T x H x W
+        # returns 3 x T x H x W
         x = np.asarray(window) / 255.
         x = np.transpose(x, (3, 0, 1, 2))
 
@@ -138,9 +152,14 @@ class Dataset(object):
             if window_fnames is None or wrong_window_fnames is None:
                 continue
 
-            window = self.read_window(window_fnames)
-            if window is None:
-                continue
+            if hparams.full_masked:
+                window, windows_masked = self.read_window_with_mask(window_fnames)
+                if window is None or windows_masked is None:
+                    continue
+            else:
+                window = self.read_window(window_fnames)
+                if window is None:
+                    continue
 
             wrong_window = self.read_window(wrong_window_fnames)
             if wrong_window is None:
@@ -162,11 +181,13 @@ class Dataset(object):
             indiv_mels = self.get_segmented_mels(orig_mel.copy(), img_name)
             if indiv_mels is None: continue
 
-            # set half the window to 0
-            y = window.copy()
-            window = self.set_face_zero(window)
             window = self.prepare_window(window)
-            # window[:, :, window.shape[2]//2:] = 0.
+            if hparams.full_masked:
+                window = self.prepare_window(windows_masked)
+                y = window
+            else:
+                y = window.copy()
+                window[:, :, window.shape[2]//2:] = 0.
 
             wrong_window = self.prepare_window(wrong_window)
             x = np.concatenate([window, wrong_window], axis=0)
