@@ -15,6 +15,27 @@ def diferentiable_greyscale(X):
     X_grey_3c = torch.stack([X_grey] * 3, dim=-3)
     return X_grey_3c
 
+def diferentiable_normalize(data: torch.Tensor, mean: list, std: list) -> torch.Tensor:
+    """
+    Inspired by https://kornia.readthedocs.io/en/latest/_modules/kornia/augmentation/augmentation.html#Normalize
+    Normalize a tensor image with mean and standard deviation.
+    """
+    shape = data.shape
+
+    mean = torch.as_tensor(mean, device=data.device, dtype=data.dtype)
+    std = torch.as_tensor(std, device=data.device, dtype=data.dtype)
+
+    if mean.shape:
+        mean = mean[..., :, None]
+    if std.shape:
+        std = std[..., :, None]
+
+    data_temp = data.view(-1,shape[-3],shape[-2],shape[-1])
+    data_temp = data_temp.view(data_temp.shape[0],data_temp.shape[1], -1)
+    out: torch.Tensor = (data_temp - mean) / std
+
+    return out.view(shape)
+
 CUDA_VISIBLE_DEVICES=1
 
 class AffectObjective(nn.Module):
@@ -29,12 +50,15 @@ class AffectObjective(nn.Module):
     }
     INPUT_SIZE = 224
 
-    def __init__(self, pretrain_path, desired_affect):
+    def __init__(self, pretrain_path, desired_affect, greyscale=False, normalize=False):
         super(AffectObjective, self).__init__()
 
         assert desired_affect in self.EMOTION_DICT
         self.pretrain_path = pretrain_path
         self.desired_affect = desired_affect
+
+        self.greyscale = greyscale
+        self.normalize = normalize
 
         self.model = models.densenet121()
         num_ftrs = self.model.classifier.in_features
@@ -55,9 +79,11 @@ class AffectObjective(nn.Module):
         :param X: A tensor ([channels, height, width]) of a cropped face image
         :return: A tensor ([]) of the desired class likelihood of the image
         """
-
-        X_grey = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
-        X_resized = F.interpolate(X_grey, self.INPUT_SIZE)      # todo experiment with interp modes
+        if self.normalize:
+            X = diferentiable_normalize(X, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        if self.greyscale:
+            X = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
+        X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear')
         logits = self.model(X_resized)                          # logits ([batch X temporal, classes])
         likelihoods = F.softmax(logits.squeeze(0), dim=-1)      # likelihoods ([classes])
         desired_likelihoods = likelihoods[...,self.desired_affect]  # desired_likelihoods ([])

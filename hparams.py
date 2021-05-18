@@ -94,6 +94,8 @@ hparams = HParams(
 	disc_initial_learning_rate=1e-4,
 
 	affect_wt=1.0,
+	greyscale_affect = False,
+	normalize_affect = True,
 
 	full_masked=True
 )
