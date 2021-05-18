@@ -39,23 +39,17 @@ def diferentiable_normalize(data: torch.Tensor, mean: list, std: list) -> torch.
 CUDA_VISIBLE_DEVICES=1
 
 class AffectObjective(nn.Module):
-    EMOTION_DICT = {
-        0: "angry",
-        1: "disgust",
-        2: "fear",
-        3: "happy",
-        4: "sad",
-        5: "surprise",
-        6: "neutral",
-    }
     INPUT_SIZE = 224
 
-    def __init__(self, pretrain_path, desired_affect, greyscale=False, normalize=False):
+    def __init__(self, pretrain_path, desired_affect: int, emotion_idx_to_label: dict,
+                 greyscale=False, normalize=False, ):
         super(AffectObjective, self).__init__()
 
-        assert desired_affect in self.EMOTION_DICT
+        self.emotion_idx_to_label = emotion_idx_to_label
+        assert desired_affect in self.emotion_idx_to_label
         self.pretrain_path = pretrain_path
         self.desired_affect = desired_affect
+
 
         self.greyscale = greyscale
         self.normalize = normalize
@@ -66,7 +60,7 @@ class AffectObjective(nn.Module):
         if torch.cuda.is_available():
             self.model.to('cuda:1')
 
-        self.model.classifier = nn.Linear(num_ftrs, len(self.EMOTION_DICT)).to(device)
+        self.model.classifier = nn.Linear(num_ftrs, len(self.emotion_idx_to_label)).to(device)
 
         self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net'])
 

@@ -82,9 +82,9 @@ hparams = HParams(
 	num_workers=1,
 	checkpoint_interval=50,
 	eval_interval=3000,
-        save_optimizer_state=True,
+    save_optimizer_state=True,
 
-        syncnet_wt=0.03, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence. 
+    syncnet_wt=0.03, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
 	syncnet_batch_size=64,
 	syncnet_lr=1e-4,
 	syncnet_eval_interval=10000,
@@ -96,6 +96,21 @@ hparams = HParams(
 	affect_wt=1.0,
 	greyscale_affect = False,
 	normalize_affect = True,
+
+	desired_affect = 3,
+	emotion_idx_to_label = { # emotion dict for off-the-shelf affect objective
+			0: "angry",
+			1: "disgust",
+			2: "fear",
+			3: "happy",
+			4: "sad",
+			5: "surprise",
+			6: "neutral",
+		},
+	# emotion_idx_to_label = {	# emotion dict for fine-tuned affect objective
+	# 		0: "happy",
+	# 		1: "neutral"
+	# 	},
 
 	full_masked=True
 )
