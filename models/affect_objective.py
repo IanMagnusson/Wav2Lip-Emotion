@@ -74,7 +74,7 @@ class AffectObjective(nn.Module):
         :return: A tensor ([]) of the desired class likelihood of the image
         """
         if self.normalize:
-            X = diferentiable_normalize(X, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            X = diferentiable_normalize(X, [0.4306, 0.3199, 0.2652], [0.1722, 0.1150, 0.0941])
         if self.greyscale:
             X = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
         X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear')
