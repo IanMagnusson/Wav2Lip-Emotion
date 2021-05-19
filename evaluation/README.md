@@ -74,6 +74,14 @@ sh calculate_scores_real_videos.sh /path/to/video/data/root
 ```
 * The generated scores will be present in the all_scores.txt generated in the ```syncnet_python/``` folder
 
+#### Notes on calculate_scores_real_videos.sh
+(written by Ian)
+
+some assumptions set inside the syncnet repo code invoked by this script may cause the script to silently fail and output
+an empty file of scores. These assumed arguments are set in `syncnet_python/run_pipeline.py`. Of note are: 
+`--min_track` which should be lowered if input videos are short. `--min_face_size` which should be lowered if input videos
+are small size.
+
 # Evaluation of image quality using FID metric.
 We will update the scripts for the FID metric shortly
 
