@@ -32,8 +32,8 @@ parser.add_argument('--face_det_batch_size', type=int,
 
 parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2Lip', default=128)
 parser.add_argument('--face_res', type=int,  help='Approximate resolution of the face at which to test', default=180)
-parser.add_argument('--min_frame_res', help='Do not downsample further below this frame resolution', default=480)
-parser.add_argument('--max_frame_res', help='Downsample to at least this frame resolution', default=720)
+parser.add_argument('--min_frame_res', type=int, help='Do not downsample further below this frame resolution', default=480)
+parser.add_argument('--max_frame_res', type=int, help='Downsample to at least this frame resolution', default=720)
 # parser.add_argument('--resize_factor', default=1, type=int)
 
 args = parser.parse_args()
