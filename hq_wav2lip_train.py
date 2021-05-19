@@ -232,7 +232,8 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-affect_objective = AffectObjective(args.affect_checkpoint_path, desired_affect=4).eval()
+affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
+                                   greyscale=hparams.greyscale_affect, normalize=hparams.normalize_affect).eval()
 def get_affect_loss(X):
     """
     :param X: A tensor ([batch, channels, temporal, height, width]) of cropped face images TODO figure out mystery dim
@@ -505,7 +506,7 @@ if __name__ == "__main__":
 
     test_data_loader = data_utils.DataLoader(
         test_dataset, batch_size=hparams.batch_size,
-        num_workers=4)
+        num_workers=hparams.num_workers)
 
     device = torch.device("cuda:1" if use_cuda else "cpu")
 
