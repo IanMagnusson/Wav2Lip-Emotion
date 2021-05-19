@@ -183,8 +183,9 @@ class Dataset(object):
 
             window = self.prepare_window(window)
             if hparams.full_masked:
+                y = window.copy()
                 window = self.prepare_window(windows_masked)
-                y = window
+
             else:
                 y = window.copy()
                 window[:, :, window.shape[2]//2:] = 0.
