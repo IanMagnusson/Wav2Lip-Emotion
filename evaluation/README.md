@@ -63,16 +63,15 @@ video data root (Folder containing all videos)
 ```
 cd syncnet_python
 ```
-* To run evaluation on the LRW, LRS2 and LRS3 test files, please run the following command:
-```
-python calculate_scores_LRS.py --data_root /path/to/video/data/root --tmp_dir tmp_dir/
-```
 
 * To run evaluation on the ReSynced dataset or your own generated videos, please run the following command:
 ```
-sh calculate_scores_real_videos.sh /path/to/video/data/root
+sh calculate_scores_real_videos.sh /path/to/video/data/root /path/to/file/to/place/scores /path/to/dir/to/place/FID/imgs
 ```
-* The generated scores will be present in the all_scores.txt generated in the ```syncnet_python/``` folder
+* This will generate LSE-D and LSE-C scores on the videos in the first arg and output them in that order, with a pair of
+scores per video on a line, in a file at the second arg
+* This command will also dump cropped faces from all the videos into the directory at the 3rd argument; make a different
+folder for the videos of each model to be evaluated as well as the ground truth videos, as these will be compared by FID next.
 
 #### Notes on calculate_scores_real_videos.sh
 (written by Ian)
@@ -83,7 +82,16 @@ an empty file of scores. These assumed arguments are set in `syncnet_python/run_
 are small size.
 
 # Evaluation of image quality using FID metric.
-We will update the scripts for the FID metric shortly
+First install the metric
+```
+pip install pytorch-fid
+```
+
+Then to get the FID score between two sets of videos, we use the folders of cropped face images generated in the last step
+and compare them. These folders are the ones that were give as the 3rd argument to `calculate_scores_real_videos.sh`
+```
+python -m pytorch_fid /path/to/face/crops/dir1 /path/to/face/crops/dir1 --device <your gpu such as cuda:0>
+```
 
 
 # Opening issues related to evaluation scripts
