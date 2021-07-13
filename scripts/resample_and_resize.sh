@@ -11,9 +11,12 @@ BITRATE=3M
 
 # paths of from root/actor/videochunk/orientation/affect/intensity/
 file_count=$(ls -1q $mead_root/*/*/front/*/*/*.mp4 | wc -l)
+echo beginning processing of $file_count .mp4 files
 for videopath in $mead_root/*/*/front/*/*/*.mp4
 do
+	echo processing $videopath
 	new_videopath=${videopath%.mp4}_resampsize.mp4
-	ffmpeg -i $videopath -r $FRAME_RATE -s $RESOLUTION -c:v $CODEX -b:v $BITRATE -movflags faststart $new_videopath
+	# options: (loglevel) muted, (y) overwrite without asking, (movflags) move all metadata to head
+	ffmpeg -loglevel quiet -y -i $videopath -r $FRAME_RATE -s $RESOLUTION -c:v $CODEX -b:v $BITRATE -movflags faststart $new_videopath
 	rm $videopath
-done | pv -l -s $file_count > /dev/null 
+done | pv -l -s $file_count > /dev/null # progress bar based on echo per iteration
