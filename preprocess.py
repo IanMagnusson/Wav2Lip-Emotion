@@ -33,9 +33,10 @@ parser.add_argument('--ngpu', help='Number of GPUs across which to run in parall
 parser.add_argument('--batch_size', help='Single GPU Face detection batch size', default=32, type=int)
 parser.add_argument("--data_root", help="Root folder of the LRS2 dataset", required=True)
 parser.add_argument("--preprocessed_root", help="Root folder of the preprocessed dataset", required=True)
+parser.add_argument("--bad_video_filelist", help="create a file here to track videos that fail face detection", default="bad_filelist.txt", type=str)
 
 args = parser.parse_args()
-args.ngpu = [1,2,3]
+args.ngpu = [0,1,2,3]
 
 fa = [face_detection.FaceAlignment(face_detection.LandmarksType._2D, flip_input=False, 
 									device='cuda:{}'.format(id)) for id in args.ngpu ]
@@ -67,14 +68,24 @@ def process_video_file(vfile, args, gpu_id):
 	i = -1
 	for fb in batches:
 		preds = fa[gpu_id].get_detections_for_batch(np.asarray(fb))
-		masks = set_face_zero(fb)
+		try:
+			masks = set_face_zero(fb)
+		except IndexError:
+			masks = None
+			if os.path.exists(args.bad_video_filelist):
+				mode = 'a'
+			else:
+				mode = 'w'
+			with open(args.bad_video_filelist, mode) as fout:
+				fout.write(vfile + '\n')
 		for j, f in enumerate(preds):
 			i += 1
 			if f is None:
 				continue
 			x1, y1, x2, y2 = f
 			cv2.imwrite(path.join(fulldir, '{}.jpg'.format(i)), fb[j][y1:y2, x1:x2])
-			cv2.imwrite(path.join(maskdir, '{}.jpg'.format(i)), cv2.cvtColor(masks[j][y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
+			if masks:
+				cv2.imwrite(path.join(maskdir, '{}.jpg'.format(i)), cv2.cvtColor(masks[j][y1:y2, x1:x2], cv2.COLOR_BGR2RGB))
 
 def set_face_zero(window):
 	masked_face = []
@@ -130,7 +141,7 @@ def main(args):
 	_ = [r.result() for r in tqdm(as_completed(futures), total=len(futures))]
 
 	print('Dumping audios...')
-
+	
 	for vfile in tqdm(filelist):
 		try:
 			process_audio_file(vfile, args)
