@@ -29,7 +29,7 @@ parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expe
 parser.add_argument('--checkpoint_path', help='Resume generator from this checkpoint', default=None, type=str)
 parser.add_argument('--disc_checkpoint_path', help='Resume quality disc from this checkpoint', default=None, type=str)
 
-parser.add_argument('--affect_checkpoint_path', help='Load the pre-trained affect objective', required=True, type=str)
+parser.add_argument('--affect_checkpoint_path', help='Load the pre-trained affect objective', default=None, type=str)
 
 args = parser.parse_args()
 
@@ -233,7 +233,8 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
+if args.affect_checkpoint_path:
+	affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
                                    greyscale=hparams.greyscale_affect, normalize=hparams.normalize_affect).eval()
 def get_affect_loss(X):
     """
@@ -286,17 +287,19 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             else:
                 perceptual_loss = 0.
 
-            if hparams.affect_wt > 0.:
+            if hparams.affect_wt > 0. and args.affect_checkpoint_path:
                 affect_loss = get_affect_loss(g)
             else:
                 affect_loss = 0.
-
-
-            l1loss = recon_loss(g, gt)
+            
+            if hparams.l1_wt > 0:
+                l1loss = recon_loss(g, gt)
+            else:
+                l1loss = 0.
 
             loss = hparams.syncnet_wt * sync_loss + \
                    hparams.disc_wt * perceptual_loss + \
-                   (1. - hparams.syncnet_wt - hparams.disc_wt - hparams.affect_wt) * l1loss + \
+                   hparams.l1_wt * l1loss + \
                    hparams.affect_wt * affect_loss
 
             loss.backward()
@@ -325,7 +328,10 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             global_step += 1
             cur_session_steps = global_step - resumed_step
 
-            running_l1_loss += l1loss.item()
+            if hparams.l1_wt:
+                running_l1_loss += l1loss.item()
+            else:
+                running_l1_loss += 0.
             if hparams.syncnet_wt > 0.:
                 running_sync_loss += sync_loss.item()
             else:
@@ -336,7 +342,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
             else:
                 running_perceptual_loss += 0.
 
-            if hparams.affect_wt > 0.:
+            if hparams.affect_wt > 0. and args.affect_checkpoint_path:
                 running_affect_loss += affect_loss.item()
             else:
                 running_affect_loss += 0.
@@ -352,7 +358,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                     average_sync_loss = eval_model(test_data_loader, global_step, device, model, disc)
 
                     if average_sync_loss < .75:
-                        hparams.set_hparam('syncnet_wt', 0.03)
+                        hparams.set_hparam('syncnet_wt', hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase)
 
             prog_bar.set_description('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
                     running_l1_loss / (step + 1),
@@ -407,15 +413,17 @@ def eval_model(test_data_loader, global_step, device, model, disc):
             else:
                 perceptual_loss = 0.
 
-            if hparams.affect_wt > 0.:
+            if hparams.affect_wt > 0. and args.affect_checkpoint_path:
                 affect_loss = get_affect_loss(g)
             else:
                 affect_loss = 0.
 
-            l1loss = recon_loss(g, gt)
-
+            if hparams.l1_wt > 0.:
+                l1loss = recon_loss(g, gt)
+            else:
+                l1loss = 0.
             loss = hparams.syncnet_wt * sync_loss + hparams.disc_wt * perceptual_loss + \
-                                    (1. - hparams.syncnet_wt - hparams.disc_wt - hparams.affect_wt) * l1loss + \
+                                    hparams.l1_wt * l1loss + \
                                     hparams.affect_wt * affect_loss
 
             running_l1_loss.append(l1loss.item())
@@ -426,7 +434,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
             else:
                 running_perceptual_loss.append(0.)
 
-            if hparams.affect_wt > 0.:
+            if hparams.affect_wt > 0. and args.affect_checkpoint_path:
                 running_affect_loss.append(affect_loss.item())
             else:
                 running_affect_loss.append(0.)
@@ -441,12 +449,12 @@ def eval_model(test_data_loader, global_step, device, model, disc):
                                                             sum(running_disc_real_loss) / len(running_disc_real_loss)))
         with open("eval.log", "a") as eval_log:
             eval_log.write('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
-                    running_l1_loss / (step + 1),
-                    running_sync_loss / (step + 1),
-                    running_perceptual_loss / (step + 1),
-                    running_affect_loss / (step + 1),
-                    running_disc_fake_loss / (step + 1),
-                    running_disc_real_loss / (step + 1)
+                    sum(running_l1_loss) / (step + 1),
+                    sum(running_sync_loss) / (step + 1),
+                    sum(running_perceptual_loss) / (step + 1),
+                    sum(running_affect_loss) / (step + 1),
+                    sum(running_disc_fake_loss) / (step + 1),
+                    sum(running_disc_real_loss) / (step + 1)
                 ))
         return sum(running_sync_loss) / len(running_sync_loss)
 
