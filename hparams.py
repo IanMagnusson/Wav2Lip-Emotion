@@ -116,7 +116,7 @@ hparams = HParams(
 	# 		1: "neutral"
 	# 	},
 
-	full_masked=False
+	full_masked=True
 )
 
 assert (hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase + hparams.disc_wt + hparams.l1_wt + hparams.affect_wt) == 1.0
