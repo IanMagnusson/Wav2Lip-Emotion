@@ -14,6 +14,7 @@ import torch.backends.cudnn as cudnn
 from torch.utils import data as data_utils
 import numpy as np
 
+import datetime
 from glob import glob
 
 import os, random, cv2, argparse
@@ -354,6 +355,8 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
 
             if global_step % hparams.eval_interval == 0:
+                with open(join(args.checkpoint_dir,"train.log"), "a") as train_log:
+                    train_log.write(f'###### Now at global epoch {global_epoch} and global step {global_step} #####\n')
                 with torch.no_grad():
                     average_sync_loss = eval_model(test_data_loader, global_step, device, model, disc)
 
@@ -370,8 +373,8 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 )
             )
 
-            with open("train.log", "a") as train_log:
-                train_log.write('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
+            with open(join(args.checkpoint_dir,"train.log"), "a") as train_log:
+                train_log.write('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}\n'.format(
                         running_l1_loss / (step + 1),
                         running_sync_loss / (step + 1),
                         running_perceptual_loss / (step + 1),
@@ -381,6 +384,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                     ))
 
         global_epoch += 1
+
 
 def eval_model(test_data_loader, global_step, device, model, disc):
     eval_steps = 300
@@ -447,14 +451,15 @@ def eval_model(test_data_loader, global_step, device, model, disc):
                                                             sum(running_affect_loss) / len(running_affect_loss),
                                                             sum(running_disc_fake_loss) / len(running_disc_fake_loss),
                                                             sum(running_disc_real_loss) / len(running_disc_real_loss)))
-        with open("eval.log", "a") as eval_log:
-            eval_log.write('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
-                    sum(running_l1_loss) / (step + 1),
-                    sum(running_sync_loss) / (step + 1),
-                    sum(running_perceptual_loss) / (step + 1),
-                    sum(running_affect_loss) / (step + 1),
-                    sum(running_disc_fake_loss) / (step + 1),
-                    sum(running_disc_real_loss) / (step + 1)
+        with open(join(args.checkpoint_dir, "eval.log"), "a") as eval_log:
+            eval_log.write(f'Evaluating at global epoch {global_epoch} and  step{global_step}\n')
+            eval_log.write('L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}\n'.format(
+                    sum(running_l1_loss) / len(running_l1_loss),
+                    sum(running_sync_loss) / len(running_sync_loss),
+                    sum(running_perceptual_loss) / len(running_perceptual_loss),
+                    sum(running_affect_loss) / len(running_affect_loss),
+                    sum(running_disc_fake_loss) / len(running_disc_fake_loss),
+                    sum(running_disc_real_loss) / len(running_disc_real_loss)
                 ))
         return sum(running_sync_loss) / len(running_sync_loss)
 
@@ -484,7 +489,10 @@ def load_checkpoint(path, model, optimizer, reset_optimizer=False, overwrite_glo
     global global_step
     global global_epoch
 
+    load_log = open(join(args.checkpoint_dir, "load.log"), 'a')
+
     print("Load checkpoint from: {}".format(path))
+    load_log.write("Load checkpoint from: {}\n".format(path))
     checkpoint = _load(path)
     s = checkpoint["state_dict"]
     new_s = {}
@@ -495,11 +503,13 @@ def load_checkpoint(path, model, optimizer, reset_optimizer=False, overwrite_glo
         optimizer_state = checkpoint["optimizer"]
         if optimizer_state is not None:
             print("Load optimizer state from {}".format(path))
+            load_log.write("Load optimizer state from {}\n".format(path))
             optimizer.load_state_dict(checkpoint["optimizer"])
     if overwrite_global_states:
         global_step = checkpoint["global_step"]
         global_epoch = checkpoint["global_epoch"]
 
+    load_log.close()
     return model
 
 if __name__ == "__main__":
@@ -531,6 +541,15 @@ if __name__ == "__main__":
     disc_optimizer = optim.Adam([p for p in disc.parameters() if p.requires_grad],
                            lr=hparams.disc_initial_learning_rate, betas=(0.5, 0.999))
 
+    if not os.path.exists(checkpoint_dir):
+        os.mkdir(checkpoint_dir)
+
+    with open(join(args.checkpoint_dir,"train.log"), "a") as train_log:
+        train_log.write(f'###############  Starting new run at {datetime.datetime.now()} #################\n')
+    with open(join(args.checkpoint_dir,"eval.log"), "a") as eval_log:
+        eval_log.write(f'###############  Starting new run at {datetime.datetime.now()} #################\n')
+    with open(join(args.checkpoint_dir,"load.log"), "a") as load_log:
+        load_log.write(f'###############  Starting new run at {datetime.datetime.now()} #################\n')
     if args.checkpoint_path is not None:
         load_checkpoint(args.checkpoint_path, model, optimizer, reset_optimizer=False)
 
@@ -540,9 +559,6 @@ if __name__ == "__main__":
 
     load_checkpoint(args.syncnet_checkpoint_path, syncnet, None, reset_optimizer=True,
                                 overwrite_global_states=False)
-
-    if not os.path.exists(checkpoint_dir):
-        os.mkdir(checkpoint_dir)
 
     # Train!
     train(device, model, disc, train_data_loader, test_data_loader, optimizer, disc_optimizer,
