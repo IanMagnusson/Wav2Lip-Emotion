@@ -31,6 +31,7 @@ parser.add_argument('--checkpoint_path', help='Resume generator from this checkp
 parser.add_argument('--disc_checkpoint_path', help='Resume quality disc from this checkpoint', default=None, type=str)
 
 parser.add_argument('--affect_checkpoint_path', help='Load the pre-trained affect objective', default=None, type=str)
+parser.add_argument('--gpu_id', help='index of gpu to use', default=0, type=int)
 
 args = parser.parse_args()
 
@@ -39,6 +40,7 @@ global_step = 0
 global_epoch = 0
 use_cuda = torch.cuda.is_available()
 print('use_cuda: {}'.format(use_cuda))
+device = torch.device(f"cuda:{args.gpu_id}" if use_cuda else "cpu")
 
 syncnet_T = 5
 syncnet_mel_step_size = 16
@@ -220,7 +222,7 @@ def cosine_loss(a, v, y):
 
     return loss
 
-device = torch.device("cuda:1" if use_cuda else "cpu")
+
 syncnet = SyncNet().to(device)
 for p in syncnet.parameters():
     p.requires_grad = False
@@ -244,7 +246,7 @@ def get_affect_loss(X):
     """
 
     # merge temporal and batch
-    X = X.permute(0, 2, 1, 3, 4).clone().to('cuda:1' if use_cuda else 'cpu')
+    X = X.permute(0, 2, 1, 3, 4).clone().to(device)
     X = X.view(-1, *X.shape[2:])
 
     desired_likelihoods = affect_objective(X)   # desired_likelihoods ([batch X ???])
@@ -527,7 +529,6 @@ if __name__ == "__main__":
         test_dataset, batch_size=hparams.batch_size,
         num_workers=hparams.num_workers)
 
-    device = torch.device("cuda:1" if use_cuda else "cpu")
 
      # Model
     model = Wav2Lip().to(device)
