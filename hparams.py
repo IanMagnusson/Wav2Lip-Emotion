@@ -78,22 +78,26 @@ hparams = HParams(
 	
 	batch_size=4,
 	initial_learning_rate=1e-4,
-	nepochs=800,  ### ctrl + c, stop whenever eval loss is consistently greater than train loss for ~10 epochs
+	nepochs=20000000000000000000000,  ### ctrl + c, stop whenever eval loss is consistently greater than train loss for ~10 epochs
 	num_workers=1,
-	checkpoint_interval=50,
-	eval_interval=3000,
+	checkpoint_interval= 1000,
+	eval_interval= 1000,
     save_optimizer_state=True,
 
-    syncnet_wt=0.03, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
-	syncnet_batch_size=64,
+        
+	syncnet_wt=0.015, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
+	syncnet_warmup_wt_increase= 0., # increases syncnet_wt by this much later on
+    syncnet_batch_size=64,
 	syncnet_lr=1e-4,
 	syncnet_eval_interval=10000,
 	syncnet_checkpoint_interval=10000,
 
-	disc_wt=0.07,
+	disc_wt=0.035,
 	disc_initial_learning_rate=1e-4,
 
-	affect_wt=1.0,
+        l1_wt=0.45,
+
+	affect_wt=0.5,
 	greyscale_affect = False,
 	normalize_affect = True,
 
@@ -115,6 +119,7 @@ hparams = HParams(
 	full_masked=True
 )
 
+assert (hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase + hparams.disc_wt + hparams.l1_wt + hparams.affect_wt) == 1.0
 
 def hparams_debug_string():
 	values = hparams.values()
