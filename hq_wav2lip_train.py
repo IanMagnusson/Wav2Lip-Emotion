@@ -50,7 +50,31 @@ syncnet_mel_step_size = 16
 class Dataset(object):
     def __init__(self, split):
         self.all_videos = get_image_list(args.data_root, split)
+        self.image_cache = {}
+        self.audio_cache = {}
 
+    def get_img(self, fname):
+        if not hparams.dataset_cache:
+            return cv2.imread(fname)
+        if fname in self.image_cache:
+            img = self.image_cache[fname].copy()
+        else:
+            img = cv2.imread(fname)
+            self.image_cache[fname] = img.copy()
+        return img
+
+    def get_audio(self, fname):
+        if not hparams.dataset_cache:
+            wav = audio.load_wav(fname, hparams.sample_rate)
+            return audio.melspectrogram(wav).T
+        if fname in self.audio_cache:
+            orig_mel = self.audio_cache[fname].copy()
+        else:
+            wav = audio.load_wav(fname, hparams.sample_rate)
+            orig_mel = audio.melspectrogram(wav).T
+            self.audio_cache[fname] = orig_mel.copy()
+        return orig_mel
+    
     def get_frame_id(self, frame):
         return int(basename(frame).split('.')[0])
 
@@ -70,7 +94,7 @@ class Dataset(object):
         if window_fnames is None: return None
         window = []
         for fname in window_fnames:
-            img = cv2.imread(fname)
+            img = self.get_img(fname)
             if img is None:
                 return None
             try:
@@ -87,18 +111,24 @@ class Dataset(object):
         window = []
         window_masked = []
         for fname in window_fnames:
-            mask_fname = join(dirname(fname) + '-m', basename(fname))
-            img_mask = cv2.imread(mask_fname)
-            img = cv2.imread(fname)
-            if img is None or img_mask is None:
+            img = self.get_img(fname)
+            if img is None:
                 return None, None
             try:
                 img = cv2.resize(img, (hparams.img_size, hparams.img_size))
+            except Exception as e:
+                return None, None
+            window.append(img)
+
+        for fname in window_fnames:
+            mask_fname = join(dirname(fname) + '-m', basename(fname))
+            img_mask = self.get_img(mask_fname)
+            if img_mask is None:
+                return None, None
+            try:
                 img_mask = cv2.resize(img_mask, (hparams.img_size, hparams.img_size))
             except Exception as e:
                 return None, None
-
-            window.append(img)
             window_masked.append(img_mask)
 
         return window, window_masked
@@ -172,9 +202,7 @@ class Dataset(object):
 
             try:
                 wavpath = join(vidname, "audio.wav")
-                wav = audio.load_wav(wavpath, hparams.sample_rate)
-
-                orig_mel = audio.melspectrogram(wav).T
+                orig_mel = self.get_audio(wavpath)
             except Exception as e:
                 continue
 
@@ -373,7 +401,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
 
 def eval_model(test_data_loader, global_step, device, model, disc):
-    count = min(3, len(test_data_loader))
+    count = min(300, len(test_data_loader))
     print('Evaluating for {} steps'.format(count))
     running_sync_loss, running_l1_loss, running_disc_real_loss, running_disc_fake_loss, running_perceptual_loss, running_affect_loss = 0., 0., 0., 0., 0., 0.
     
