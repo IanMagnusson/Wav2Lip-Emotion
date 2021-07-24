@@ -129,9 +129,9 @@ class Wav2Lip_disc_qual(nn.Module):
         super(Wav2Lip_disc_qual, self).__init__()
 
         self.face_encoder_blocks = nn.ModuleList([
-            nn.Sequential(nonorm_Conv2d(3, 32, kernel_size=7, stride=1, padding=3)), # 48,96
+            nn.Sequential(nonorm_Conv2d(3, 32, kernel_size=7, stride=1, padding=3)), # 96,96
 
-            nn.Sequential(nonorm_Conv2d(32, 64, kernel_size=5, stride=1, padding=2), # 48,48
+            nn.Sequential(nonorm_Conv2d(32, 64, kernel_size=5, stride=2, padding=2), # 48,48
             nonorm_Conv2d(64, 64, kernel_size=5, stride=1, padding=2)),
 
             nn.Sequential(nonorm_Conv2d(64, 128, kernel_size=5, stride=2, padding=2),    # 24,24
