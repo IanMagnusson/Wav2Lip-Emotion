@@ -19,7 +19,7 @@ id -u $(whoami)
 
 # inside repo top directory so that it uses the Dockerfile there
 docker build -t <image name>:<version tag> .
-docker run -dit -v /mas:/mas -v /u:/u -v /dtmp:/dtmp -v /tmp:/tmp --name $(whoami)-<image name>-<version tag> <image name>:<version tag>
+docker run --shm-size 16g -dit -v /mas:/mas -v /u:/u -v /dtmp:/dtmp -v /tmp:/tmp --name $(whoami)-<image name>-<version tag> <image name>:<version tag>
 docker exec -it $(whoami)-<image name>-<version tag> bash
 
 # You will now be inside the container and complete some installs that require user input
@@ -53,7 +53,7 @@ docker rmi $(whoami)/<image name>-<version tag>
 ```
 # now you can move your ~tensorflow-1.tar.gz export to another machine or just import it on another matlaber
 docker load -i ~/<image name>-<version tag>.tar.gz
-docker run -dit -v /mas:/mas -v /u:/u -v /dtmp:/dtmp -v /tmp:/tmp --name $(whoami)-<image name>-<version tag> $(whoami)/<image name>-<version tag>
+docker run --shm-size 16g -dit -v /mas:/mas -v /u:/u -v /dtmp:/dtmp -v /tmp:/tmp --name $(whoami)-<image name>-<version tag> $(whoami)/<image name>-<version tag>
 # I recommend removing your image immediately after
 docker rmi $(whoami)/<image name>-<version tag>
 ```
