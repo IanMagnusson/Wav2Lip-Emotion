@@ -204,13 +204,14 @@ class Dataset(object):
             y = torch.FloatTensor(y)
             return x, indiv_mels, mel, y
 
-def save_sample_images(x, g, gt, global_step, checkpoint_dir):
+def save_sample_images(x, g, gt, global_step, sample_dir):
     x = (x.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
     g = (g.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
     gt = (gt.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
 
     refs, inps = x[..., 3:], x[..., :3]
-    folder = join(checkpoint_dir, "samples_step{:09d}".format(global_step))
+    if not os.path.exists(sample_dir): os.mkdir(sample_dir)
+    folder = join(sample_dir, "samples_step{:09d}".format(global_step))
     if not os.path.exists(folder): os.mkdir(folder)
     collage = np.concatenate((refs, inps, g, gt), axis=-2)
     for batch_idx, c in enumerate(collage):
@@ -328,7 +329,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 running_disc_fake_loss += disc_fake_loss.item()
 
             if global_step % checkpoint_interval == 0:
-                save_sample_images(x, g, gt, global_step, checkpoint_dir)
+                save_sample_images(x, g, gt, global_step, join(checkpoint_dir,'train_samples'))
 
             # Logs
             global_step += 1
@@ -347,7 +348,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
             if global_step % hparams.eval_interval == 0:
                 with open(join(args.checkpoint_dir,"train.log"), "a") as train_log:
-                    train_log.write(f'###### Now at global epoch {global_epoch} and global step {global_step} #####\n')
+                    train_log.write('###### Now at global epoch {} and global step{:09d} #####\n'.format(global_epoch, global_step))
                 with torch.no_grad():
                     average_sync_loss = eval_model(test_data_loader, global_step, device, model, disc)
 
@@ -372,7 +373,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
 
 def eval_model(test_data_loader, global_step, device, model, disc):
-    count = min(300, len(test_data_loader))
+    count = min(3, len(test_data_loader))
     print('Evaluating for {} steps'.format(count))
     running_sync_loss, running_l1_loss, running_disc_real_loss, running_disc_fake_loss, running_perceptual_loss, running_affect_loss = 0., 0., 0., 0., 0., 0.
     
@@ -386,6 +387,8 @@ def eval_model(test_data_loader, global_step, device, model, disc):
         gt = gt.to(device)
         
         g = model(indiv_mels, x)
+        if step  == 0:
+            save_sample_images(x, g, gt, global_step, join(checkpoint_dir,'eval_samples'))
 
         if disc:
             pred = disc(gt)
@@ -432,7 +435,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
                                                         running_disc_real_loss / count)
     print(report)
     with open(join(args.checkpoint_dir, "eval.log"), "a") as eval_log:
-        eval_log.write(f'Evaluating at global epoch {global_epoch} and  step{global_step}\n')
+        eval_log.write('Evaluating at global epoch {} and  step{:09d}\n'.format(global_epoch, global_step))
         eval_log.write(report + '\n')
 
     return running_sync_loss / count
