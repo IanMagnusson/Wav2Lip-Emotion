@@ -86,17 +86,18 @@ hparams = HParams(
     save_optimizer_state=True,
 
         
-	syncnet_wt=0.015, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
+	syncnet_wt=0.03, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
 	syncnet_warmup_wt_increase= 0.0, # increases syncnet_wt by this much later on
     syncnet_batch_size=64,
 	syncnet_lr=1e-4,
 	syncnet_eval_interval=10000,
 	syncnet_checkpoint_interval=10000,
 
-	disc_wt=0.035,
+	disc_wt=0.07,
 	disc_initial_learning_rate=1e-4,
+        disc_bn = False,
 
-        l1_wt=0.45,
+        l1_wt=0.9,
 
 	affect_wt=0.0,
 	greyscale_affect = False,
@@ -117,7 +118,7 @@ hparams = HParams(
 	# 		1: "neutral"
 	# 	},
 
-	full_masked=True
+	full_masked=False
 )
 
 assert (hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase + hparams.disc_wt + hparams.l1_wt + hparams.affect_wt) == 1.0

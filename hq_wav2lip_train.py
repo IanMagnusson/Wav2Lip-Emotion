@@ -232,6 +232,18 @@ class Dataset(object):
             y = torch.FloatTensor(y)
             return x, indiv_mels, mel, y
 
+def get_grad_norm(model):
+    # from https://discuss.pytorch.org/t/check-the-norm-of-gradients/27961/2
+    norm_type = 2
+    parameters = [p for p in model.parameters() if p.grad is not None and p.requires_grad]
+    if len(parameters) == 0:
+        print("here")
+        total_norm = 0.0
+    else:
+        device = parameters[0].grad.device
+        total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), 2.0).item()
+    return total_norm
+    
 def save_sample_images(x, g, gt, global_step, sample_dir):
     x = (x.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
     g = (g.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
@@ -353,6 +365,8 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
 
                 disc_optimizer.step()
 
+                disc_grad_norm = get_grad_norm(disc)
+
                 running_disc_real_loss += disc_real_loss.item()
                 running_disc_fake_loss += disc_fake_loss.item()
 
@@ -384,13 +398,14 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                         hparams.set_hparam('syncnet_wt', hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase)
 
 
-            report = 'L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}'.format(
+            report = 'L1: {}, Sync: {}, Percep: {} Affect: {} | Fake: {}, Real: {}, norm {}'.format(
                     running_l1_loss / (step + 1),
                     running_sync_loss / (step + 1),
                     running_perceptual_loss / (step + 1),
                     running_affect_loss / (step + 1),
                     running_disc_fake_loss / (step + 1),
-                    running_disc_real_loss / (step + 1)
+                    running_disc_real_loss / (step + 1),
+                    disc_grad_norm
                 )
             prog_bar.set_description(report)
 
@@ -543,7 +558,7 @@ if __name__ == "__main__":
     print('total trainable params {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
     
     if hparams.disc_wt:
-        disc = Wav2Lip_disc_qual().to(device)
+        disc = Wav2Lip_disc_qual(hparams.disc_bn).to(device)
         disc_optimizer = optim.Adam([p for p in disc.parameters() if p.requires_grad],
                            lr=hparams.disc_initial_learning_rate, betas=(0.5, 0.999))
         print('total DISC trainable params {}'.format(sum(p.numel() for p in disc.parameters() if p.requires_grad)))
