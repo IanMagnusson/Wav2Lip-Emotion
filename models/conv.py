@@ -26,6 +26,12 @@ class nonorm_Conv2d(nn.Module):
                             )
         self.act = nn.LeakyReLU(0.01, inplace=True)
 
+        def forward(self, x):
+            out = self.conv_block(x)
+            if self.residual:
+                out += x
+            return self.act(out)
+
     def forward(self, x):
         out = self.conv_block(x)
         return self.act(out)
