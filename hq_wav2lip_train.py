@@ -74,7 +74,7 @@ class Dataset(object):
             orig_mel = audio.melspectrogram(wav).T
             self.audio_cache[fname] = orig_mel.copy()
         return orig_mel
-    
+
     def get_frame_id(self, frame):
         return int(basename(frame).split('.')[0])
 
@@ -242,8 +242,9 @@ def get_grad_norm(model):
     else:
         device = parameters[0].grad.device
         total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), norm_type).to(device) for p in parameters]), 2.0).item()
+
     return total_norm
-    
+
 def save_sample_images(x, g, gt, global_step, sample_dir):
     x = (x.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
     g = (g.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
@@ -337,7 +338,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 affect_loss = get_affect_loss(g)
             else:
                 affect_loss = torch.zeros(1).to(device)
-            
+
             if hparams.l1_wt > 0:
                 l1loss = recon_loss(g, gt)
             else:
@@ -362,7 +363,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 pred = disc(g.detach())
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
-
+                torch.nn.clip_grad_norm(disc.parameters(), 1.0)
                 disc_optimizer.step()
 
                 disc_grad_norm = get_grad_norm(disc)
@@ -419,7 +420,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
     count = min(300, len(test_data_loader))
     print('Evaluating for {} steps'.format(count))
     running_sync_loss, running_l1_loss, running_disc_real_loss, running_disc_fake_loss, running_perceptual_loss, running_affect_loss = 0., 0., 0., 0., 0., 0.
-    
+
     for step, (x, indiv_mels, mel, gt) in tqdm(enumerate(test_data_loader)):
         model.eval()
         if disc: disc.eval()
@@ -428,7 +429,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
         mel = mel.to(device)
         indiv_mels = indiv_mels.to(device)
         gt = gt.to(device)
-        
+
         g = model(indiv_mels, x)
         if step  == 0:
             save_sample_images(x, g, gt, global_step, join(checkpoint_dir,'eval_samples'))
@@ -467,7 +468,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
         running_sync_loss += sync_loss.item()
         running_perceptual_loss += perceptual_loss.item()
         running_affect_loss += affect_loss.item()
-        
+
         if step > count: break
 
     report = 'L1: {}, Sync: {}, Percep: {}, Affect: {} | Fake: {}, Real: {}'.format(running_l1_loss / count,
@@ -556,7 +557,7 @@ if __name__ == "__main__":
     # Model
     model = Wav2Lip().to(device)
     print('total trainable params {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
-    
+
     if hparams.disc_wt:
         disc = Wav2Lip_disc_qual(hparams.disc_bn).to(device)
         disc_optimizer = optim.Adam([p for p in disc.parameters() if p.requires_grad],
