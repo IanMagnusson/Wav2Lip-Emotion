@@ -363,7 +363,9 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 pred = disc(g.detach())
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
-                torch.nn.clip_grad_norm(disc.parameters(), 1.0)
+                
+                if hparams.disc_max_grad_norm: torch.nn.clip_grad_norm(disc.parameters(), hparams.disc_max_grad_norm)
+                
                 disc_optimizer.step()
 
                 disc_grad_norm = get_grad_norm(disc)
@@ -559,7 +561,7 @@ if __name__ == "__main__":
     print('total trainable params {}'.format(sum(p.numel() for p in model.parameters() if p.requires_grad)))
 
     if hparams.disc_wt:
-        disc = Wav2Lip_disc_qual(hparams.disc_bn).to(device)
+        disc = Wav2Lip_disc_qual(hparams.disc_bn, hparams.disc_residual).to(device)
         disc_optimizer = optim.Adam([p for p in disc.parameters() if p.requires_grad],
                            lr=hparams.disc_initial_learning_rate, betas=(0.5, 0.999))
         print('total DISC trainable params {}'.format(sum(p.numel() for p in disc.parameters() if p.requires_grad)))
