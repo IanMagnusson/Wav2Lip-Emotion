@@ -27,7 +27,9 @@ class HParams:
 	def set_hparam(self, key, value):
 		self.data[key] = value
 
-
+	def __repr__(self):
+		return str(self.data)
+        
 # Default hyperparameters
 hparams = HParams(
 	num_mels=80,  # Number of mel-spectrogram channels and local conditioning dimensionality
@@ -77,10 +79,10 @@ hparams = HParams(
 	fps=25,
 	
         dataset_cache=False,
-        batch_size=16,
+        batch_size=8,
 	initial_learning_rate=1e-4,
 	nepochs=20000000000000000000000,  ### ctrl + c, stop whenever eval loss is consistently greater than train loss for ~10 epochs
-	num_workers=16,
+	num_workers=8,
 	checkpoint_interval= 3000,
 	eval_interval= 3000,
     save_optimizer_state=True,
@@ -96,13 +98,13 @@ hparams = HParams(
 	disc_wt=0.07,
 	disc_initial_learning_rate=1e-4,
         disc_bn = False,
-        disc_residual = False,
+        disc_residual = True,
         disc_max_grad_norm = None,
 
-        l1_wt=0.9,
+        l1_wt=0.8,
 
-	affect_wt=0.0,
-	greyscale_affect = False,
+	affect_wt=0.1,
+	greyscale_affect = True,
 	normalize_affect = True,
 
 	desired_affect = 3,

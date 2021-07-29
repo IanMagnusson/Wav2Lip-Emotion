@@ -513,11 +513,6 @@ def load_checkpoint(path, model, optimizer, reset_optimizer=False, overwrite_glo
     global global_epoch
 
     load_log = open(join(args.checkpoint_dir, "load.log"), 'a')
-    load_log.write(f"l1_wt: {hparams.l1_wt}\n")
-    load_log.write(f"syncnet_wt: {hparams.syncnet_wt}\n")
-    load_log.write(f"syncnet_warmup_wt_increase: {hparams.syncnet_warmup_wt_increase}\n")
-    load_log.write(f"disc_wt: {hparams.disc_wt}\n")
-    load_log.write(f"batch_size: {hparams.batch_size}\n")
 
     print("Load checkpoint from: {}".format(path))
     load_log.write("Load checkpoint from: {}\n".format(path))
@@ -580,6 +575,7 @@ if __name__ == "__main__":
     with open(join(args.checkpoint_dir,"eval.log"), "a") as eval_log:
         eval_log.write(f'###############  Starting new run at {datetime.datetime.now()} #################\n')
     with open(join(args.checkpoint_dir,"load.log"), "a") as load_log:
+        load_log.write(f"hparams:\n{hparams}\n")
         load_log.write(f'###############  Starting new run at {datetime.datetime.now()} #################\n')
     if args.checkpoint_path is not None:
         load_checkpoint(args.checkpoint_path, model, optimizer, reset_optimizer=False)
