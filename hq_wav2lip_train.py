@@ -364,7 +364,7 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
                 
-                if hparams.disc_max_grad_norm: torch.nn.clip_grad_norm(disc.parameters(), hparams.disc_max_grad_norm)
+                if hparams.disc_max_grad_norm: torch.nn.utils.clip_grad_norm_(disc.parameters(), hparams.disc_max_grad_norm)
                 
                 disc_optimizer.step()
 
