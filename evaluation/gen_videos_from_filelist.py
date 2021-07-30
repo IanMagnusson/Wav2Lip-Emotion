@@ -174,10 +174,13 @@ def main():
 		lines = filelist.readlines()
 
 	for idx, line in enumerate(tqdm(lines)):
-		audio_src, video = line.strip().split()
+		audio_in, video_in = line.strip().split()
 
-		audio_src = os.path.join(data_root, audio_src) + '.mp4'
-		video = os.path.join(data_root, video) + '.mp4'
+		audio_src = os.path.join(data_root, audio_in) + '.mp4'
+		video = os.path.join(data_root, video_in) + '.mp4'
+
+		audio_in = '_'.join(audio_in.split('/'))
+		video_in = '_'.join(video_in.split('/'))
 
 		temp_audio = f'../temp/temp{args.gpu_id}.wav'
 		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, temp_audio)
@@ -243,7 +246,7 @@ def main():
 
 		out.release()
 
-		vid = os.path.join(args.results_dir, '{}.mp4'.format(idx))
+		vid = os.path.join(args.results_dir, 'vid{}_audio{}.mp4'.format(video_in, audio_in))
 
 		command = 'ffmpeg -loglevel panic -y -i {} -i {} -strict -2 -q:v 1 {}'.format(temp_audio, 
 								temp_video, vid)
