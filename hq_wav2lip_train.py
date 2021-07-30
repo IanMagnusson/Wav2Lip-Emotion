@@ -23,7 +23,7 @@ from hparams import hparams, get_image_list
 parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model WITH the visual quality discriminator')
 
 parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
-
+parser.add_argument("--affect_data_root", help="Root folder of the preprocessed affect you are trying to generate", required=True, type=str)
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
 parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True, type=str)
 
@@ -50,6 +50,7 @@ syncnet_mel_step_size = 16
 class Dataset(object):
     def __init__(self, split):
         self.all_videos = get_image_list(args.data_root, split)
+        self.affect_videos = get_image_list(args.affect_data_root, split)
         self.image_cache = {}
         self.audio_cache = {}
 
@@ -172,17 +173,21 @@ class Dataset(object):
     def __getitem__(self, idx):
         while 1:
             idx = random.randint(0, len(self.all_videos) - 1)
+            # print(f'idx: {idx}')
             vidname = self.all_videos[idx]
+            # print(f'vidname: {vidname}')
             img_names = list(glob(join(vidname, '*.jpg')))
             if len(img_names) <= 3 * syncnet_T:
                 continue
 
             img_name = random.choice(img_names)
+            affect_img_name = img_name.replace(args.data_root, args.affect_data_root)
             wrong_img_name = random.choice(img_names)
             while wrong_img_name == img_name:
                 wrong_img_name = random.choice(img_names)
 
             window_fnames = self.get_window(img_name)
+            print(f'\nwindow_fnames: {window_fnames}')
             wrong_window_fnames = self.get_window(wrong_img_name)
             if window_fnames is None or wrong_window_fnames is None:
                 continue
@@ -215,12 +220,19 @@ class Dataset(object):
             if indiv_mels is None: continue
 
             window = self.prepare_window(window)
-            if hparams.full_masked:
-                y = window.copy()
-                window = self.prepare_window(windows_masked)
 
+            if hparams.full_masked:
+                if (not hparams.gt_affect):
+                    y = window.copy()
+                else:
+                    y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
+                print(f'y: {y}')
+                window = self.prepare_window(windows_masked)
             else:
-                y = window.copy()
+                if (not hparams.gt_affect):
+                    y = window.copy()
+                else:
+                    y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
                 window[:, :, window.shape[2]//2:] = 0.
 
             wrong_window = self.prepare_window(wrong_window)
