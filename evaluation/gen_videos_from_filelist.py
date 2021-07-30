@@ -10,6 +10,7 @@ sys.path.append('../')
 import audio
 import face_detection
 from models import Wav2Lip
+from scripts.mask_preprocessed_images import mask_img
 
 parser = argparse.ArgumentParser(description='Code to generate results for test filelists')
 
@@ -28,6 +29,8 @@ parser.add_argument('--face_det_batch_size', type=int,
 parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2Lip', default=128)
 
 parser.add_argument('--gpu_id', type=int, help='which gpu to use', default=0)
+
+parser.add_argument('--full_mask', action='store_true', help='use full instead of half masking', default=False)
 
 # parser.add_argument('--resize_factor', default=1, type=int)
 
@@ -80,6 +83,7 @@ def face_detect(images):
 
 def datagen(frames, face_det_results, mels):
 	img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
+	if args.full_mask: masked_batch = []
 
 	for i, m in enumerate(mels):
 		if i >= len(frames): raise ValueError('Equal or less lengths only')
@@ -90,7 +94,10 @@ def datagen(frames, face_det_results, mels):
 			continue
 
 		face = cv2.resize(face, (args.img_size, args.img_size))
-			
+		
+		if args.full_mask:
+			masked_batch.append(mask_img(face))
+
 		img_batch.append(face)
 		mel_batch.append(m)
 		frame_batch.append(frame_to_save)
@@ -99,8 +106,11 @@ def datagen(frames, face_det_results, mels):
 		if len(img_batch) >= args.wav2lip_batch_size:
 			img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
 
-			img_masked = img_batch.copy()
-			img_masked[:, args.img_size//2:] = 0
+			if args.full_mask:
+				img_masked = np.asarray(masked_batch)
+			else:
+				img_masked = img_batch.copy()
+				img_masked[:, args.img_size//2:] = 0
 
 			img_batch = np.concatenate((img_masked, img_batch), axis=3) / 255.
 			mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
@@ -111,8 +121,11 @@ def datagen(frames, face_det_results, mels):
 	if len(img_batch) > 0:
 		img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
 
-		img_masked = img_batch.copy()
-		img_masked[:, args.img_size//2:] = 0
+		if args.full_mask:
+			img_masked = np.asarray(masked_batch)
+		else:
+			img_masked = img_batch.copy()
+			img_masked[:, args.img_size//2:] = 0
 
 		img_batch = np.concatenate((img_masked, img_batch), axis=3) / 255.
 		mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
@@ -219,7 +232,6 @@ def main():
 
 			with torch.no_grad():
 				pred = model(mel_batch, img_batch)
-					
 
 			pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
 			

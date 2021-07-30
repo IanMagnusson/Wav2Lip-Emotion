@@ -18,19 +18,10 @@ import numpy as np
 
 import face_detection
 
-
 MODEL_PATH = "/u/ianmag/emotion-synthesis/shape_predictor_81_face_landmarks.dat"
+predictor = dlib.shape_predictor(MODEL_PATH)
 
-parser = argparse.ArgumentParser()
-
-parser.add_argument("--input", help="image file (.jpg) containing already cropped face to mask", required=True)
-parser.add_argument("--output", help="output path for masked image file", required=True)
-
-args = parser.parse_args()
-
-def mask_img(infile, outfile):
-        img = cv2.imread(infile)
-        predictor = dlib.shape_predictor(MODEL_PATH)
+def mask_img(img):
         height, width, channels = img.shape
         sp = predictor(img, dlib.rectangle(0, 0, width -1,  height - 1))
         landmarks = np.array([[p.x, p.y] for p in sp.parts()])
@@ -40,8 +31,17 @@ def mask_img(infile, outfile):
         X[X >= img.shape[1]] = img.shape[1] - 1
         cropped_img = np.zeros(img.shape, dtype=np.uint8)
         cropped_img[Y, X] = img[Y, X]
-        final = cv2.subtract(img, cropped_img)
-        img_masked = cv2.cvtColor(final, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(outfile, cv2.cvtColor(img_masked, cv2.COLOR_BGR2RGB))
+        return cv2.subtract(img, cropped_img)
 
-mask_img(args.input, args.output)
+if __name__ == '__main__':
+        parser = argparse.ArgumentParser()
+
+        parser.add_argument("--input", help="image file (.jpg) containing already cropped face to mask", required=True)
+        parser.add_argument("--output", help="output path for masked image file", required=True)
+
+        args = parser.parse_args()
+
+
+        img = cv2.imread(args.input)
+        masked_img = mask_img(img)
+        cv2.imwrite(args.output, masked_img)
