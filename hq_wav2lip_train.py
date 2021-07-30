@@ -268,6 +268,7 @@ def cosine_loss(a, v, y):
 
 
 syncnet = SyncNet().to(device)
+syncnet.eval()
 for p in syncnet.parameters():
     p.requires_grad = False
 
@@ -365,9 +366,9 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 pred = disc(g.detach())
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
-                
+
                 if hparams.disc_max_grad_norm: torch.nn.utils.clip_grad_norm_(disc.parameters(), hparams.disc_max_grad_norm)
-                
+
                 disc_optimizer.step()
 
                 disc_grad_norm = get_grad_norm(disc)
