@@ -283,6 +283,8 @@ def get_sync_loss(mel, g):
 if args.affect_checkpoint_path:
     affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
                                    greyscale=hparams.greyscale_affect, normalize=hparams.normalize_affect).eval()
+    affect_objective.to(device)
+
 def get_affect_loss(X):
     """
     :param X: A tensor ([batch, channels, temporal, height, width]) of cropped face images TODO figure out mystery dim
