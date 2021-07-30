@@ -27,6 +27,8 @@ parser.add_argument('--face_det_batch_size', type=int,
 					help='Single GPU batch size for face detection', default=64)
 parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2Lip', default=128)
 
+parser.add_argument('--gpu_id', type=int, help='which gpu to use', default=0)
+
 # parser.add_argument('--resize_factor', default=1, type=int)
 
 args = parser.parse_args()
@@ -120,14 +122,14 @@ def datagen(frames, face_det_results, mels):
 fps = 25
 mel_step_size = 16
 mel_idx_multiplier = 80./fps
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = f'cuda:{args.gpu_id}' if torch.cuda.is_available() else 'cpu'
 print('Using {} for inference.'.format(device))
 
 detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D, 
 											flip_input=False, device=device)
 
 def _load(checkpoint_path):
-	if device == 'cuda':
+	if device != 'cpu':
 		checkpoint = torch.load(checkpoint_path)
 	else:
 		checkpoint = torch.load(checkpoint_path,
@@ -164,9 +166,9 @@ def main():
 		audio_src = os.path.join(data_root, audio_src) + '.mp4'
 		video = os.path.join(data_root, video) + '.mp4'
 
-		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, '../temp/temp.wav')
+		temp_audio = f'../temp/temp{args.gpu_id}.wav'
+		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, temp_audio)
 		subprocess.call(command, shell=True)
-		temp_audio = '../temp/temp.wav'
 
 		wav = audio.load_wav(temp_audio, 16000)
 		mel = audio.melspectrogram(wav)
@@ -205,10 +207,11 @@ def main():
 		batch_size = args.wav2lip_batch_size
 		gen = datagen(full_frames.copy(), face_det_results, mel_chunks)
 
+		temp_video = f'../temp/result{args.gpu_id}.avi'
 		for i, (img_batch, mel_batch, frames, coords) in enumerate(gen):
 			if i == 0:
 				frame_h, frame_w = full_frames[0].shape[:-1]
-				out = cv2.VideoWriter('../temp/result.avi', 
+				out = cv2.VideoWriter(temp_video, 
 								cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
 
 			img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
@@ -231,7 +234,7 @@ def main():
 		vid = os.path.join(args.results_dir, '{}.mp4'.format(idx))
 
 		command = 'ffmpeg -loglevel panic -y -i {} -i {} -strict -2 -q:v 1 {}'.format(temp_audio, 
-								'../temp/result.avi', vid)
+								temp_video, vid)
 		subprocess.call(command, shell=True)
 
 if __name__ == '__main__':
