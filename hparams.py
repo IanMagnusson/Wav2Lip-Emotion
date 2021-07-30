@@ -79,7 +79,7 @@ hparams = HParams(
 	fps=25,
 	
         dataset_cache=False,
-        batch_size=8,
+        batch_size=16,
 	initial_learning_rate=1e-4,
 	nepochs=20000000000000000000000,  ### ctrl + c, stop whenever eval loss is consistently greater than train loss for ~10 epochs
 	num_workers=8,
@@ -101,9 +101,9 @@ hparams = HParams(
         disc_residual = True,
         disc_max_grad_norm = None,
 
-        l1_wt=0.8,
+        l1_wt=0.9,
 
-	affect_wt=0.1,
+	affect_wt=0,
 	greyscale_affect = True,
 	normalize_affect = True,
 
