@@ -31,11 +31,14 @@ parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2L
 parser.add_argument('--gpu_id', type=int, help='which gpu to use', default=0)
 
 parser.add_argument('--full_mask', action='store_true', help='use full instead of half masking', default=False)
+parser.add_argument('--save_gt_frames', action='store_true', help='also save all the ground truth frames into a file for FID', default=False)
 
 # parser.add_argument('--resize_factor', default=1, type=int)
 
 args = parser.parse_args()
 args.img_size = 96
+GENERATED_FRAMES_DIR = os.path.join(args.results_dir, "generated_frames")
+GT_FRAMES_DIR = os.path.join(args.results_dir, "gt_frames")
 
 def get_smoothened_boxes(boxes, T):
 	for i in range(len(boxes)):
@@ -169,6 +172,8 @@ def main():
 	data_root = args.data_root
 
 	if not os.path.isdir(args.results_dir): os.makedirs(args.results_dir)
+	if not os.path.isdir(GENERATED_FRAMES_DIR): os.mkdir(GENERATED_FRAMES_DIR)
+	if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
 
 	with open(args.filelist, 'r') as filelist:
 		lines = filelist.readlines()
@@ -220,10 +225,15 @@ def main():
 		except ValueError as e:
 			continue
 
+		if args.save_gt_frames:
+			for frame_idx, (face, _, _ ) in enumerate(face_det_results):
+				cv2.imwrite(os.path.join(GT_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), face)
+		
 		batch_size = args.wav2lip_batch_size
 		gen = datagen(full_frames.copy(), face_det_results, mel_chunks)
 
 		temp_video = f'../temp/result{args.gpu_id}.avi'
+		frame_idx = 0
 		for i, (img_batch, mel_batch, frames, coords) in enumerate(gen):
 			if i == 0:
 				frame_h, frame_w = full_frames[0].shape[:-1]
@@ -237,10 +247,13 @@ def main():
 				pred = model(mel_batch, img_batch)
 
 			pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
-			
+
+
 			for pl, f, c in zip(pred, frames, coords):
 				y1, y2, x1, x2 = c
 				pl = cv2.resize(pl.astype(np.uint8), (x2 - x1, y2 - y1))
+				cv2.imwrite(os.path.join(GENERATED_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), pl)
+				frame_idx += 1
 				f[y1:y2, x1:x2] = pl
 				out.write(f)
 
