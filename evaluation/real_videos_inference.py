@@ -10,6 +10,7 @@ sys.path.append('../')
 import audio
 import face_detection
 from models import Wav2Lip
+from scripts.mask_preprocessed_images import mask_img
 
 parser = argparse.ArgumentParser(description='Code to generate results on ReSyncED evaluation set')
 
@@ -34,10 +35,18 @@ parser.add_argument('--wav2lip_batch_size', type=int, help='Batch size for Wav2L
 parser.add_argument('--face_res', type=int,  help='Approximate resolution of the face at which to test', default=180)
 parser.add_argument('--min_frame_res', type=int, help='Do not downsample further below this frame resolution', default=480)
 parser.add_argument('--max_frame_res', type=int, help='Downsample to at least this frame resolution', default=720)
+parser.add_argument('--gpu_id', type=int, help='which gpu to use', default=0)
+parser.add_argument('--full_mask', action='store_true', help='use full instead of half masking', default=False)
+parser.add_argument('--save_gt_frames', action='store_true', help='also save all the ground truth frames into a file for FID', default=False)
+
+
 # parser.add_argument('--resize_factor', default=1, type=int)
 
 args = parser.parse_args()
 args.img_size = 96
+
+GENERATED_FRAMES_DIR = os.path.join(args.results_dir, "generated_frames")
+GT_FRAMES_DIR = os.path.join(args.results_dir, "gt_frames")
 
 def get_smoothened_boxes(boxes, T):
 	for i in range(len(boxes)):
@@ -107,6 +116,7 @@ def face_detect(images):
 
 def datagen(frames, face_det_results, mels):
 	img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
+	if args.full_mask: masked_batch = []
 
 	for i, m in enumerate(mels):
 		if i >= len(frames): raise ValueError('Equal or less lengths only')
@@ -117,6 +127,9 @@ def datagen(frames, face_det_results, mels):
 			continue
 
 		face = cv2.resize(face, (args.img_size, args.img_size))
+
+		if args.full_mask:
+			masked_batch.append(mask_img(face))
 			
 		img_batch.append(face)
 		mel_batch.append(m)
@@ -126,8 +139,11 @@ def datagen(frames, face_det_results, mels):
 		if len(img_batch) >= args.wav2lip_batch_size:
 			img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
 
-			img_masked = img_batch.copy()
-			img_masked[:, args.img_size//2:] = 0
+			if args.full_mask:
+				img_masked = np.asarray(masked_batch)
+			else:
+				img_masked = img_batch.copy()
+				img_masked[:, args.img_size//2:] = 0
 
 			img_batch = np.concatenate((img_masked, img_batch), axis=3) / 255.
 			mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
@@ -138,8 +154,11 @@ def datagen(frames, face_det_results, mels):
 	if len(img_batch) > 0:
 		img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
 
-		img_masked = img_batch.copy()
-		img_masked[:, args.img_size//2:] = 0
+		if args.full_mask:
+			img_masked = np.asarray(masked_batch)
+		else:
+			img_masked = img_batch.copy()
+			img_masked[:, args.img_size//2:] = 0
 
 		img_batch = np.concatenate((img_masked, img_batch), axis=3) / 255.
 		mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
@@ -167,14 +186,14 @@ def increase_frames(frames, l):
 	return frames[:l]
 
 mel_step_size = 16
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = f'cuda:{args.gpu_id}' if torch.cuda.is_available() else 'cpu'
 print('Using {} for inference.'.format(device))
 
 detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D, 
 											flip_input=False, device=device)
 
 def _load(checkpoint_path):
-	if device == 'cuda':
+	if device != 'cpu':
 		checkpoint = torch.load(checkpoint_path)
 	else:
 		checkpoint = torch.load(checkpoint_path,
@@ -198,6 +217,8 @@ model = load_model(args.checkpoint_path)
 
 def main():
 	if not os.path.isdir(args.results_dir): os.makedirs(args.results_dir)
+	if not os.path.isdir(GENERATED_FRAMES_DIR): os.mkdir(GENERATED_FRAMES_DIR)
+	 if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
 
 	if args.mode == 'dubbed':
 		files = listdir(args.data_root)
@@ -209,14 +230,17 @@ def main():
 			lines = filelist.readlines()
 
 	for idx, line in enumerate(tqdm(lines)):
-		video, audio_src = line.strip().split()
+		audio_in, video_in = line.strip().split()
 
-		audio_src = os.path.join(args.data_root, audio_src)
-		video = os.path.join(args.data_root, video)
+		audio_src = os.path.join(args.data_root, audio_in)
+		video = os.path.join(args.data_root, video_in)
 
-		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, '../temp/temp.wav')
+		audio_in = '_'.join(audio_in.split('/'))
+		video_in = '_'.join(video_in.split('/'))
+
+		temp_audio = f'../temp/temp{args.gpu_id}.wav'
+		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, temp_audio)
 		subprocess.call(command, shell=True)
-		temp_audio = '../temp/temp.wav'
 
 		wav = audio.load_wav(temp_audio, 16000)
 		mel = audio.melspectrogram(wav)
@@ -268,14 +292,20 @@ def main():
 		except ValueError as e:
 			continue
 
+		if args.save_gt_frames:
+			for frame_idx, (face, _, _ ) in enumerate(face_det_results):
+				cv2.imwrite(os.path.join(GT_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), face)
+
 		batch_size = args.wav2lip_batch_size
 		gen = datagen(full_frames.copy(), face_det_results, mel_chunks)
 
+		temp_video = f'../temp/result{args.gpu_id}.avi'
+		frame_idx = 0
 		for i, (img_batch, mel_batch, frames, coords) in enumerate(gen):
 			if i == 0:
 				frame_h, frame_w = full_frames[0].shape[:-1]
 
-				out = cv2.VideoWriter('../temp/result.avi', 
+				out = cv2.VideoWriter(temp_video, 
 								cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
 
 			img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
@@ -290,14 +320,16 @@ def main():
 			for pl, f, c in zip(pred, frames, coords):
 				y1, y2, x1, x2 = c
 				pl = cv2.resize(pl.astype(np.uint8), (x2 - x1, y2 - y1))
+				cv2.imwrite(os.path.join(GENERATED_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), pl)
+				frame_idx += 1
 				f[y1:y2, x1:x2] = pl
 				out.write(f)
 
 		out.release()
 
-		vid = os.path.join(args.results_dir, '{}.mp4'.format(idx))
-		command = 'ffmpeg -loglevel panic -y -i {} -i {} -strict -2 -q:v 1 {}'.format('../temp/temp.wav', 
-								'../temp/result.avi', vid)
+		vid = os.path.join(args.results_dir, 'vid{}_audio{}.mp4'.format(video_in, audio_in))
+		command = 'ffmpeg -loglevel panic -y -i {} -i {} -strict -2 -q:v 1 {}'.format(temp_audio, 
+								temp_video, vid)
 		subprocess.call(command, shell=True)
 
 
