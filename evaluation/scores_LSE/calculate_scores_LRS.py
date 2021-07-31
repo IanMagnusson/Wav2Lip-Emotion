@@ -40,7 +40,12 @@ avg_min_distance = 0.
 
 for videofile_idx in prog_bar:
 	videofile = all_videos[videofile_idx]
-	offset, confidence, min_distance = s.evaluate(opt, videofile=videofile)
+	try:
+		offset, confidence, min_distance = s.evaluate(opt, videofile=videofile)
+	except FileNotFoundError as err:
+		print(f"failed on {videofile}")
+		print(err)
+		continue
 	avg_confidence += confidence
 	avg_min_distance += min_distance
 	prog_bar.set_description('Avg Confidence: {}, Avg Minimum Dist: {}'.format(round(avg_confidence / (videofile_idx + 1), 3), round(avg_min_distance / (videofile_idx + 1), 3)))

@@ -228,7 +228,8 @@ def main():
 		assert args.filelist is not None
 		with open(args.filelist, 'r') as filelist:
 			lines = filelist.readlines()
-
+	
+	failed_videos = []
 	for idx, line in enumerate(tqdm(lines)):
 		audio_in, video_in = line.strip().split()
 
@@ -290,6 +291,7 @@ def main():
 		try:
 			face_det_results, full_frames = face_detect(full_frames.copy())
 		except ValueError as e:
+			failed_videos.append(line)	
 			continue
 
 		if args.save_gt_frames:
@@ -332,6 +334,8 @@ def main():
 								temp_video, vid)
 		subprocess.call(command, shell=True)
 
+	with open(os.join(args.results_dir, f'failed_videos{args.gpu_id}.txt'), 'w') as fout:
+		fout.writelines(failed_videos)
 
 if __name__ == '__main__':
 	main()

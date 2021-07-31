@@ -178,6 +178,7 @@ def main():
 	with open(args.filelist, 'r') as filelist:
 		lines = filelist.readlines()
 
+	failed_videos = []
 	for idx, line in enumerate(tqdm(lines)):
 		audio_in, video_in = line.strip().split()
 
@@ -194,6 +195,7 @@ def main():
 		wav = audio.load_wav(temp_audio, 16000)
 		mel = audio.melspectrogram(wav)
 		if np.isnan(mel.reshape(-1)).sum() > 0:
+			failed_videos.append(line)
 			continue
 
 		mel_chunks = []
@@ -216,6 +218,7 @@ def main():
 			full_frames.append(frame)
 
 		if len(full_frames) < len(mel_chunks):
+			failed_videos.append(line.strip())
 			continue
 
 		full_frames = full_frames[:len(mel_chunks)]
@@ -223,6 +226,7 @@ def main():
 		try:
 			face_det_results = face_detect(full_frames.copy())
 		except ValueError as e:
+			failed_videos.append(line)
 			continue
 
 		if args.save_gt_frames:
@@ -264,6 +268,9 @@ def main():
 		command = 'ffmpeg -loglevel panic -y -i {} -i {} -strict -2 -q:v 1 {}'.format(temp_audio, 
 								temp_video, vid)
 		subprocess.call(command, shell=True)
+
+	with open(os.path.join(args.results_dir, f"failed_videos{args.gpu_id}.txt"), 'w') as fout:
+		fout.writelines(failed_videos)
 
 if __name__ == '__main__':
 	main()
