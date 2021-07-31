@@ -105,7 +105,7 @@ hparams = HParams(
 	greyscale_affect = True,
 	normalize_affect = True,
 
-	desired_affect = 3,
+	desired_affect = 1,
 	emotion_idx_to_label = { # emotion dict for off-the-shelf affect objective
 			0: "angry",
 			1: "disgust",
@@ -115,9 +115,9 @@ hparams = HParams(
 			5: "surprise",
 			6: "neutral",
 		},
-	# emotion_idx_to_label = {	# emotion dict for fine-tuned affect objective
-	# 		0: "happy",
-	# 		1: "neutral"
+	#emotion_idx_to_label = {	# emotion dict for fine-tuned affect objective
+	#		0: "happy",
+	# 		1: "sad"
 	# 	},
 
 	full_masked=True,

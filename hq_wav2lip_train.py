@@ -82,7 +82,9 @@ class Dataset(object):
     def get_window(self, start_frame):
         start_id = self.get_frame_id(start_frame)
         vidname = dirname(start_frame)
-
+        #print(f'start_id {start_id}')
+        #print(f'vidname {vidname}')
+        #print(f'syncnet_T {syncnet_T}')
         window_fnames = []
         for frame_id in range(start_id, start_id + syncnet_T):
             frame = join(vidname, '{}.jpg'.format(frame_id))
@@ -226,7 +228,6 @@ class Dataset(object):
                     y = window.copy()
                 else:
                     y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
-                print(f'y: {y}')
                 window = self.prepare_window(windows_masked)
             else:
                 if (not hparams.gt_affect):

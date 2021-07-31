@@ -56,10 +56,12 @@ class AffectObjective(nn.Module):
 
         self.model = models.densenet121()
         num_ftrs = self.model.classifier.in_features
+        device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.model.to('cuda:2')
 
-        self.model.classifier = nn.Linear(num_ftrs, len(self.emotion_idx_to_label))
-
-        self.model.load_state_dict(torch.load(pretrain_path)['net'])
+        self.model.classifier = nn.Linear(num_ftrs, len(self.emotion_idx_to_label)).to(device)
+        self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net'])
 
         # like on syncnet we only need gradients wrt the inputs not wrt the parameters so I think this saves compute
         for p in self.model.parameters():
