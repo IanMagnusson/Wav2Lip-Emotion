@@ -183,13 +183,14 @@ class Dataset(object):
                 continue
 
             img_name = random.choice(img_names)
-            affect_img_name = img_name.replace(args.data_root, args.affect_data_root)
+            if hparams.gt_affect and hparams.full_masked:
+                img_name = img_name.replace(args.data_root, args.affect_data_root) 
             wrong_img_name = random.choice(img_names)
+            
             while wrong_img_name == img_name:
                 wrong_img_name = random.choice(img_names)
 
             window_fnames = self.get_window(img_name)
-            print(f'\nwindow_fnames: {window_fnames}')
             wrong_window_fnames = self.get_window(wrong_img_name)
             if window_fnames is None or wrong_window_fnames is None:
                 continue
@@ -227,17 +228,18 @@ class Dataset(object):
                 if (not hparams.gt_affect):
                     y = window.copy()
                 else:
-                    y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
-                window = self.prepare_window(windows_masked)
+                    y = self.prepare_window(self.read_window(self.get_window(img_name)))
+                window_masked = self.prepare_window(windows_masked)
             else:
                 if (not hparams.gt_affect):
                     y = window.copy()
                 else:
-                    y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
-                window[:, :, window.shape[2]//2:] = 0.
+                    y = self.prepare_window(self.read_window(self.get_window(img_name)))
+                window_masked = window
+                window_masked[:, :, window.shape[2]//2:] = 0.
 
             wrong_window = self.prepare_window(wrong_window)
-            x = np.concatenate([window, wrong_window], axis=0)
+            x = np.concatenate([window_masked, wrong_window], axis=0)
 
             x = torch.FloatTensor(x)
             mel = torch.FloatTensor(mel.T).unsqueeze(0)
