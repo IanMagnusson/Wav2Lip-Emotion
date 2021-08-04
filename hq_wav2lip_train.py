@@ -185,6 +185,8 @@ class Dataset(object):
             img_name = random.choice(img_names)
             if hparams.gt_affect and hparams.full_masked:
                 img_name = img_name.replace(args.data_root, args.affect_data_root) 
+            else if hparams.gt_affect and not hparams.full_masked:
+                affect_img_name = img_name.replace(args.data_root, args.affect_data_root) 
             wrong_img_name = random.choice(img_names)
             
             while wrong_img_name == img_name:
@@ -234,7 +236,7 @@ class Dataset(object):
                 if (not hparams.gt_affect):
                     y = window.copy()
                 else:
-                    y = self.prepare_window(self.read_window(self.get_window(img_name)))
+                    y = self.prepare_window(self.read_window(self.get_window(affect_img_name)))
                 window_masked = window
                 window_masked[:, :, window.shape[2]//2:] = 0.
 
