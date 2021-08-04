@@ -23,7 +23,8 @@ from hparams import hparams, get_image_list
 parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model WITH the visual quality discriminator')
 
 parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
-
+parser.add_argument("--dest_affect_root",
+    help="Root folder of the preprocessed data for the destination affect you are trying to generate", required=True, type=str)
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
 parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True, type=str)
 
@@ -35,7 +36,10 @@ parser.add_argument('--gpu_id', help='index of gpu to use', default=0, type=int)
 
 args = parser.parse_args()
 
-if args.affect_checkpoint_path == None and hparams.affect_wt > 0.:
+if not args.dest_affect_root and (hparams.gt_dest_affect or hparams.mask_dest_affect):
+    parser.error('destination affect data must be provided at --dest_affect_root if using dest_affect hparams')
+    
+if args.affect_checkpoint_path is None and hparams.affect_wt > 0.:
     parser.error('affect_checkpoint_path cannot be used when hparams.affect_wt is set to 0')
 
 global_step = 0
@@ -50,6 +54,7 @@ syncnet_mel_step_size = 16
 class Dataset(object):
     def __init__(self, split):
         self.all_videos = get_image_list(args.data_root, split)
+        self.affect_videos = get_image_list(args.dest_affect_root, split)
         self.image_cache = {}
         self.audio_cache = {}
 
@@ -81,7 +86,6 @@ class Dataset(object):
     def get_window(self, start_frame):
         start_id = self.get_frame_id(start_frame)
         vidname = dirname(start_frame)
-
         window_fnames = []
         for frame_id in range(start_id, start_id + syncnet_T):
             frame = join(vidname, '{}.jpg'.format(frame_id))
@@ -90,11 +94,11 @@ class Dataset(object):
             window_fnames.append(frame)
         return window_fnames
 
-    def read_window(self, window_fnames):
+    def read_window(self, window_fnames, masked = False):
         if window_fnames is None: return None
         window = []
         for fname in window_fnames:
-            img = self.get_img(fname)
+            img = self.get_img(join(dirname(fname) + '-m', basename(fname)) if masked else fname)
             if img is None:
                 return None
             try:
@@ -104,34 +108,7 @@ class Dataset(object):
 
             window.append(img)
 
-        return window
-
-    def read_window_with_mask(self, window_fnames):
-        if window_fnames is None: return None
-        window = []
-        window_masked = []
-        for fname in window_fnames:
-            img = self.get_img(fname)
-            if img is None:
-                return None, None
-            try:
-                img = cv2.resize(img, (hparams.img_size, hparams.img_size))
-            except Exception as e:
-                return None, None
-            window.append(img)
-
-        for fname in window_fnames:
-            mask_fname = join(dirname(fname) + '-m', basename(fname))
-            img_mask = self.get_img(mask_fname)
-            if img_mask is None:
-                return None, None
-            try:
-                img_mask = cv2.resize(img_mask, (hparams.img_size, hparams.img_size))
-            except Exception as e:
-                return None, None
-            window_masked.append(img_mask)
-
-        return window, window_masked
+        return self.prepare_window(window)
 
     def crop_audio_window(self, spec, start_frame):
         if type(start_frame) == int:
@@ -178,58 +155,52 @@ class Dataset(object):
                 continue
 
             img_name = random.choice(img_names)
+            target_img_name = img_name.replace(args.data_root, args.dest_affect_root) if hparams.gt_dest_affect else img_name
+            mask_img_name = img_name.replace(args.data_root, args.dest_affect_root) if hparams.mask_dest_affect else img_name
+
             wrong_img_name = random.choice(img_names)
             while wrong_img_name == img_name:
                 wrong_img_name = random.choice(img_names)
 
-            window_fnames = self.get_window(img_name)
+            target_window_fnames = self.get_window(target_img_name)
+            mask_window_fnames = self.get_window(mask_img_name)
             wrong_window_fnames = self.get_window(wrong_img_name)
-            if window_fnames is None or wrong_window_fnames is None:
+            if target_window_fnames is None or  mask_window_fnames is None or wrong_window_fnames is None:
                 continue
-
-            if hparams.full_masked:
-                window, windows_masked = self.read_window_with_mask(window_fnames)
-                if window is None or windows_masked is None:
-                    continue
-            else:
-                window = self.read_window(window_fnames)
-                if window is None:
-                    continue
-
+            
+            target_window = self.read_window(target_window_fnames)
             wrong_window = self.read_window(wrong_window_fnames)
-            if wrong_window is None:
+            if hparams.full_masked:
+                masked_window = self.read_window(mask_window_fnames, masked=True)
+            else:
+                masked_window = self.read_window(mask_window_fnames) if (hparams.gt_dest_affect != hparams.mask_dest_affect) \
+                    else target_window.copy()
+                masked_window[:, :, masked_window.shape[2]//2:] = 0.
+            if target_window is None or wrong_window is None or masked_window is None:
                 continue
 
             try:
                 wavpath = join(vidname, "audio.wav")
+                if hparams.gt_dest_affect: wavpath = wavpath.replace(args.data_root, args.dest_affect_root)
                 orig_mel = self.get_audio(wavpath)
             except Exception as e:
                 continue
 
-            mel = self.crop_audio_window(orig_mel.copy(), img_name)
+            mel = self.crop_audio_window(orig_mel.copy(), target_img_name)
 
             if (mel.shape[0] != syncnet_mel_step_size):
                 continue
 
-            indiv_mels = self.get_segmented_mels(orig_mel.copy(), img_name)
-            if indiv_mels is None: continue
+            indiv_mels = self.get_segmented_mels(orig_mel.copy(), target_img_name)
+            if indiv_mels is None:
+                continue
 
-            window = self.prepare_window(window)
-            if hparams.full_masked:
-                y = window.copy()
-                window = self.prepare_window(windows_masked)
-
-            else:
-                y = window.copy()
-                window[:, :, window.shape[2]//2:] = 0.
-
-            wrong_window = self.prepare_window(wrong_window)
-            x = np.concatenate([window, wrong_window], axis=0)
+            x = np.concatenate([masked_window, wrong_window], axis=0)
 
             x = torch.FloatTensor(x)
             mel = torch.FloatTensor(mel.T).unsqueeze(0)
             indiv_mels = torch.FloatTensor(indiv_mels).unsqueeze(1)
-            y = torch.FloatTensor(y)
+            y = torch.FloatTensor(target_window)
             return x, indiv_mels, mel, y
 
 def get_grad_norm(model):
@@ -237,7 +208,6 @@ def get_grad_norm(model):
     norm_type = 2
     parameters = [p for p in model.parameters() if p.grad is not None and p.requires_grad]
     if len(parameters) == 0:
-        print("here")
         total_norm = 0.0
     else:
         device = parameters[0].grad.device
@@ -268,6 +238,7 @@ def cosine_loss(a, v, y):
 
 
 syncnet = SyncNet().to(device)
+syncnet.eval()
 for p in syncnet.parameters():
     p.requires_grad = False
 
@@ -280,7 +251,7 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-if args.affect_checkpoint_path:
+if hparams.affect_wt:
     affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
                                    greyscale=hparams.greyscale_affect, normalize=hparams.normalize_affect).eval()
     affect_objective.to(device)
@@ -365,9 +336,9 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 pred = disc(g.detach())
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
-                
+
                 if hparams.disc_max_grad_norm: torch.nn.utils.clip_grad_norm_(disc.parameters(), hparams.disc_max_grad_norm)
-                
+
                 disc_optimizer.step()
 
                 disc_grad_norm = get_grad_norm(disc)

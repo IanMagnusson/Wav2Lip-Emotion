@@ -74,7 +74,7 @@ class AffectObjective(nn.Module):
             X = diferentiable_normalize(X, [0.4306, 0.3199, 0.2652], [0.1722, 0.1150, 0.0941])
         if self.greyscale:
             X = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
-        X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear')
+        X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear', align_corners=False)
         logits = self.model(X_resized)                          # logits ([batch X temporal, classes])
         likelihoods = F.softmax(logits.squeeze(0), dim=-1)      # likelihoods ([classes])
         desired_likelihoods = likelihoods[...,self.desired_affect]  # desired_likelihoods ([])
