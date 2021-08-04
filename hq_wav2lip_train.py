@@ -82,9 +82,6 @@ class Dataset(object):
     def get_window(self, start_frame):
         start_id = self.get_frame_id(start_frame)
         vidname = dirname(start_frame)
-        #print(f'start_id {start_id}')
-        #print(f'vidname {vidname}')
-        #print(f'syncnet_T {syncnet_T}')
         window_fnames = []
         for frame_id in range(start_id, start_id + syncnet_T):
             frame = join(vidname, '{}.jpg'.format(frame_id))
@@ -175,9 +172,7 @@ class Dataset(object):
     def __getitem__(self, idx):
         while 1:
             idx = random.randint(0, len(self.all_videos) - 1)
-            # print(f'idx: {idx}')
             vidname = self.all_videos[idx]
-            # print(f'vidname: {vidname}')
             img_names = list(glob(join(vidname, '*.jpg')))
             if len(img_names) <= 3 * syncnet_T:
                 continue
