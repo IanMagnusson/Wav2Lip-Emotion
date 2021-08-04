@@ -1,6 +1,6 @@
 # Novel Evaluation Framework, new filelists, and using the LSE-D and LSE-C metric.
 
-Our paper also proposes a novel evaluation framework (Section 4). To evaluate on LRS2, LRS3, and LRW, the filelists are present in the `test_filelists` folder. Please use `gen_videos_from_filelist.py` script to generate the videos. After that, you can calculate the LSE-D and LSE-C scores using the instructions below. Please see [this thread](https://github.com/Rudrabha/Wav2Lip/issues/22#issuecomment-712825380) on how to calculate the FID scores. 
+Our paper also proposes a novel evaluation framework (Section 4). To evaluate on LRS2, LRS3, and LRW, the filelists are present in the `test_filelists` folder. Please use `gen_videos_from_filelist.py` script to generate the videos for LR* data and use `real_videos_inference.py` to generate videos from other sources. After that, you can calculate the LSE-D and LSE-C scores using the instructions below. Please see [this thread](https://github.com/Rudrabha/Wav2Lip/issues/22#issuecomment-712825380) on how to calculate the FID scores. 
 
 The videos of the ReSyncED benchmark for real-world evaluation will be released soon. 
 
@@ -23,7 +23,7 @@ sh download_model.sh
 (written by Ian)
 
 There are two scripts for generating videos en-mass: `gen_videos_from_filelist.py` and `real_videos_inference.py`.
-I believe `gen_videos_from_filelist.py` is just for LRS data, so we will use `real_videos_inference.py`.
+`gen_videos_from_filelist.py` can be used with LRS2 data and the provided test filelists. But for generating videos based on MEAD iputs we will use the dubbed video feature in `real_videos_inference.py`. This allows both the audio and video of the input video to be used as input to the generator, allowing only the affect of the input to be changed.
 ```
 python3 real_videos_inference.py --mode dubbed 
                                  --filelist <path to filelist>
