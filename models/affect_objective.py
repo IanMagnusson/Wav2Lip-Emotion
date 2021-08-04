@@ -56,12 +56,10 @@ class AffectObjective(nn.Module):
 
         self.model = models.densenet121()
         num_ftrs = self.model.classifier.in_features
-        device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
-        if torch.cuda.is_available():
-            self.model.to('cuda:2')
 
-        self.model.classifier = nn.Linear(num_ftrs, len(self.emotion_idx_to_label)).to(device)
-        self.model.load_state_dict(torch.load(pretrain_path, map_location=device)['net'])
+        self.model.classifier = nn.Linear(num_ftrs, len(self.emotion_idx_to_label))
+
+        self.model.load_state_dict(torch.load(pretrain_path)['net'])
 
         # like on syncnet we only need gradients wrt the inputs not wrt the parameters so I think this saves compute
         for p in self.model.parameters():
@@ -76,7 +74,7 @@ class AffectObjective(nn.Module):
             X = diferentiable_normalize(X, [0.4306, 0.3199, 0.2652], [0.1722, 0.1150, 0.0941])
         if self.greyscale:
             X = diferentiable_greyscale(X)                # X_transformed ([batch X temporal, channels, height, width])
-        X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear')
+        X_resized = F.interpolate(X, self.INPUT_SIZE, mode='bilinear', align_corners=False)
         logits = self.model(X_resized)                          # logits ([batch X temporal, classes])
         likelihoods = F.softmax(logits.squeeze(0), dim=-1)      # likelihoods ([classes])
         desired_likelihoods = likelihoods[...,self.desired_affect]  # desired_likelihoods ([])

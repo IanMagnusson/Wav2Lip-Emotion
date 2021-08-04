@@ -77,35 +77,35 @@ hparams = HParams(
 	###################### Our training parameters #################################
 	img_size=96,
 	fps=25,
-        dataset_cache=False,
-        batch_size=16,
+	dataset_cache=False,
+	batch_size=8,
 	initial_learning_rate=1e-4,
 	nepochs=20000000000000000000000,  ### ctrl + c, stop whenever eval loss is consistently greater than train loss for ~10 epochs
 	num_workers=8,
 	checkpoint_interval= 3000,
 	eval_interval= 3000,
-        save_optimizer_state=True,
+	save_optimizer_state=True,
 
 	syncnet_wt=0.03, # is initially zero, will be set automatically to 0.03 later. Leads to faster convergence.
 	syncnet_warmup_wt_increase= 0.0, # increases syncnet_wt by this much later on
-        syncnet_batch_size=64,
+	syncnet_batch_size=64,
 	syncnet_lr=1e-4,
 	syncnet_eval_interval=10000,
 	syncnet_checkpoint_interval=10000,
 
 	disc_wt=0.07,
 	disc_initial_learning_rate=1e-4,
-        disc_bn = False,
-        disc_residual = True,
-        disc_max_grad_norm = None,
+	disc_bn = False,
+	disc_residual = True,
+	disc_max_grad_norm = None,
 
-        l1_wt=0.8,
+	l1_wt=0.8,
 
 	affect_wt=0.1,
 	greyscale_affect = True,
 	normalize_affect = True,
 
-	desired_affect = 1,
+	desired_affect = 4,
 	emotion_idx_to_label = { # emotion dict for off-the-shelf affect objective
 			0: "angry",
 			1: "disgust",
@@ -117,7 +117,8 @@ hparams = HParams(
 		},
 	
 	full_masked=True,
-	gt_affect=True
+	gt_dest_affect=True, # uses the destination affect for the target image
+    mask_dest_affect=True # uses the destination affect for the masked image (for use with full mask)
 )
 
 assert (hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase + hparams.disc_wt + hparams.l1_wt + hparams.affect_wt) == 1.0
