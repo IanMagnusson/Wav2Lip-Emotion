@@ -99,9 +99,9 @@ hparams = HParams(
         disc_residual = True,
         disc_max_grad_norm = None,
 
-        l1_wt=0.9,
+        l1_wt=0.8,
 
-	affect_wt=0,
+	affect_wt=0.1,
 	greyscale_affect = True,
 	normalize_affect = True,
 
@@ -115,11 +115,7 @@ hparams = HParams(
 			5: "surprise",
 			6: "neutral",
 		},
-	#emotion_idx_to_label = {	# emotion dict for fine-tuned affect objective
-	#		0: "happy",
-	# 		1: "sad"
-	# 	},
-
+	
 	full_masked=True,
 	gt_affect=True
 )
