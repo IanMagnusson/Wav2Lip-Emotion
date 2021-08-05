@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model WI
 
 parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
 parser.add_argument("--dest_affect_root",
-    help="Root folder of the preprocessed data for the destination affect you are trying to generate", required=True, type=str)
+    help="Root folder of the preprocessed data for the destination affect you are trying to generate", type=str)
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
 parser.add_argument('--syncnet_checkpoint_path', help='Load the pre-trained Expert discriminator', required=True, type=str)
 
@@ -55,7 +55,7 @@ syncnet_mel_step_size = 16
 class Dataset(object):
     def __init__(self, split):
         self.all_videos = get_image_list(args.data_root, split)
-        self.affect_videos = get_image_list(args.dest_affect_root, split)
+        self.affect_videos = get_image_list(args.dest_affect_root, split) if args.dest_affect_root else None
         self.image_cache = {}
         self.audio_cache = {}
 
