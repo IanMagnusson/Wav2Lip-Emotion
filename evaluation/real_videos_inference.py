@@ -283,7 +283,9 @@ def main():
 			if args.mode == 'tts':
 				full_frames = increase_frames(full_frames, len(mel_chunks))
 			else:
-				raise ValueError('#Frames, audio length mismatch')
+				print('#Frames, audio length mismatch:', line)
+				failed_videos.append(line)	
+				continue
 
 		else:
 			full_frames = full_frames[:len(mel_chunks)]
