@@ -66,7 +66,7 @@ cd syncnet_python
 
 * To run evaluation on the ReSynced dataset or your own generated videos, please run the following command:
 ```
-sh calculate_scores_real_videos.sh /path/to/video/data/root /path/to/file/to/place/scores <gpu id number> <run number to name tmp dir>
+sh calculate_scores_real_videos.sh /path/to/video/data/root /path/to/file/to/place/scores <gpu id number>
 ```
 * This will generate LSE-D and LSE-C scores on the videos in the first arg and output them in that order, with a pair of
 scores per video on a line, in a file at the second arg
