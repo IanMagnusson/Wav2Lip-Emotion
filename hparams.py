@@ -97,7 +97,8 @@ hparams = HParams(
 	disc_initial_learning_rate=1e-4,
 	disc_bn = False,
 	disc_residual = True,
-	disc_max_grad_norm = None,
+    disc_min_grad_norm = 1e-2,
+	disc_max_grad_norm = 1e10,
 
 	l1_wt=0.8,
 

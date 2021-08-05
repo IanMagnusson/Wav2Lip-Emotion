@@ -215,6 +215,18 @@ def get_grad_norm(model):
 
     return total_norm
 
+def clamp_grad_norm_(parameters):
+    parameters = [p for p in parameters if p.grad is not None]
+    total_norm = torch.norm(torch.stack([torch.norm(p.grad.detach(), 2.0).to(device) for p in parameters]), 2.0)
+    clip_coef = hparams.disc_max_grad_norm / (total_norm + 1e-6)
+    stretch_coef = hparams.disc_min_grad_norm / (total_norm + 1e-6)
+    if clip_coef < 1.0:
+            for p in parameters:
+                        p.grad.detach().mul_(clip_coef.to(p.grad.device))
+    elif stretch_coef > 1.0:
+            for p in parameters:
+                        p.grad.detach().mul_(stretch_coef.to(p.grad.device))
+
 def save_sample_images(x, g, gt, global_step, sample_dir):
     x = (x.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
     g = (g.detach().cpu().numpy().transpose(0, 2, 3, 4, 1) * 255.).astype(np.uint8)
@@ -337,7 +349,9 @@ def train(device, model, disc, train_data_loader, test_data_loader, optimizer, d
                 disc_fake_loss = F.binary_cross_entropy(pred, torch.zeros((len(pred), 1)).to(device))
                 disc_fake_loss.backward()
 
-                if hparams.disc_max_grad_norm: torch.nn.utils.clip_grad_norm_(disc.parameters(), hparams.disc_max_grad_norm)
+                if hparams.disc_max_grad_norm and hparams.disc_min_grad_norm: 
+                    #torch.nn.utils.clip_grad_norm_(disc.parameters(), hparams.disc_max_grad_norm)
+                    clamp_grad_norm_(disc.parameters())
 
                 disc_optimizer.step()
 
