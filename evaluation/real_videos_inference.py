@@ -15,7 +15,7 @@ from scripts.mask_preprocessed_images import mask_img
 parser = argparse.ArgumentParser(description='Code to generate results on ReSyncED evaluation set')
 
 parser.add_argument('--mode', type=str, 
-					help='random | dubbed | tts', required=True)
+					help='random | dubbed | tts | affect', required=True)
 
 parser.add_argument('--filelist', type=str, 
 					help='Filepath of filelist file to read', default=None)
@@ -228,6 +228,8 @@ def main():
 		assert args.filelist is not None
 		with open(args.filelist, 'r') as filelist:
 			lines = filelist.readlines()
+		if args.mode == 'affect':
+			lines = [line.strip() + ' ' + line.strip() + '\n' for line in lines]
 	
 	failed_videos = []
 	for idx, line in enumerate(tqdm(lines)):

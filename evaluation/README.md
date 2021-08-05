@@ -23,9 +23,9 @@ sh download_model.sh
 (written by Ian)
 
 There are two scripts for generating videos en-mass: `gen_videos_from_filelist.py` and `real_videos_inference.py`.
-`gen_videos_from_filelist.py` can be used with LRS2 data and the provided test filelists. But for generating videos based on MEAD iputs we will use the dubbed video feature in `real_videos_inference.py`. This allows both the audio and video of the input video to be used as input to the generator, allowing only the affect of the input to be changed.
+`gen_videos_from_filelist.py` can be used with LRS2 data and the provided test filelists. But for generating videos based on MEAD iputs we will use the affect mode in `real_videos_inference.py`. This allows both the audio and video of the input video to be used as input to the generator, allowing only the affect of the input to be changed.
 ```
-python3 real_videos_inference.py --mode dubbed 
+python3 real_videos_inference.py --mode affect 
                                  --filelist <path to filelist>
                                  --results_dir <path to where you want videos to go>
                                  --data_root <path to actual videos to input to generator model>
