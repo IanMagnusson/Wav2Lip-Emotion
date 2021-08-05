@@ -339,7 +339,7 @@ def main():
 								temp_video, vid)
 		subprocess.call(command, shell=True)
 
-	with open(os.join(args.results_dir, f'failed_videos{args.gpu_id}.txt'), 'w') as fout:
+	with open(os.path.join(args.results_dir, f'failed_videos{args.gpu_id}.txt'), 'w') as fout:
 		fout.writelines(failed_videos)
 
 if __name__ == '__main__':
