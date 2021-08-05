@@ -296,6 +296,7 @@ def main():
 
 		if args.save_gt_frames:
 			for frame_idx, (face, _, _ ) in enumerate(face_det_results):
+				face = cv2.resize(face, (args.img_size, args.img_size))	
 				cv2.imwrite(os.path.join(GT_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), face)
 
 		batch_size = args.wav2lip_batch_size
@@ -316,13 +317,13 @@ def main():
 			with torch.no_grad():
 				pred = model(mel_batch, img_batch)
 					
-
 			pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
 			
 			for pl, f, c in zip(pred, frames, coords):
 				y1, y2, x1, x2 = c
-				pl = cv2.resize(pl.astype(np.uint8), (x2 - x1, y2 - y1))
+				pl = pl.astype(np.uint8)
 				cv2.imwrite(os.path.join(GENERATED_FRAMES_DIR, video_in + f'_{frame_idx}.jpg'), pl)
+				pl = cv2.resize(pl, (x2 - x1, y2 - y1))
 				frame_idx += 1
 				f[y1:y2, x1:x2] = pl
 				out.write(f)
