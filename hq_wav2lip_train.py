@@ -32,6 +32,7 @@ parser.add_argument('--checkpoint_path', help='Resume generator from this checkp
 parser.add_argument('--disc_checkpoint_path', help='Resume quality disc from this checkpoint', default=None, type=str)
 
 parser.add_argument('--affect_checkpoint_path', help='Load the pre-trained affect objective', default=None, type=str)
+parser.add_argument('--affect_eval_only', action='store_true', help='Load the pre-trained affect objective, but use it just for eval', default=False)
 parser.add_argument('--gpu_id', help='index of gpu to use', default=0, type=int)
 
 args = parser.parse_args()
@@ -39,7 +40,7 @@ args = parser.parse_args()
 if not args.dest_affect_root and (hparams.gt_dest_affect or hparams.mask_dest_affect):
     parser.error('destination affect data must be provided at --dest_affect_root if using dest_affect hparams')
     
-if args.affect_checkpoint_path is None and hparams.affect_wt > 0.:
+if args.affect_checkpoint_path is None and hparams.affect_wt > 0. and not args.affect_eval_only:
     parser.error('affect_checkpoint_path cannot be used when hparams.affect_wt is set to 0')
 
 global_step = 0
@@ -263,7 +264,7 @@ def get_sync_loss(mel, g):
     y = torch.ones(g.size(0), 1).float().to(device)
     return cosine_loss(a, v, y)
 
-if hparams.affect_wt:
+if hparams.affect_wt or args.affect_eval_only:
     affect_objective = AffectObjective(args.affect_checkpoint_path, hparams.desired_affect, hparams.emotion_idx_to_label,
                                    greyscale=hparams.greyscale_affect, normalize=hparams.normalize_affect).eval()
     affect_objective.to(device)
@@ -440,7 +441,7 @@ def eval_model(test_data_loader, global_step, device, model, disc):
         else:
             perceptual_loss = torch.zeros(1).to(device)
 
-        if hparams.affect_wt > 0.:
+        if hparams.affect_wt > 0. or args.affect_eval_only:
             affect_loss = get_affect_loss(g)
         else:
             affect_loss = torch.zeros(1).to(device)
