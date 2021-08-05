@@ -119,7 +119,7 @@ def datagen(frames, face_det_results, mels):
 			mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
 
 			yield img_batch, mel_batch, frame_batch, coords_batch
-			img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
+			img_batch, mel_batch, frame_batch, coords_batch, masked_batch = [], [], [], [], []
 
 	if len(img_batch) > 0:
 		img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)

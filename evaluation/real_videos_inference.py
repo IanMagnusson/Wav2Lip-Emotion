@@ -149,7 +149,7 @@ def datagen(frames, face_det_results, mels):
 			mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
 
 			yield img_batch, mel_batch, frame_batch, coords_batch
-			img_batch, mel_batch, frame_batch, coords_batch = [], [], [], []
+			img_batch, mel_batch, frame_batch, coords_batch, masked_batch = [], [], [], [], []
 
 	if len(img_batch) > 0:
 		img_batch, mel_batch = np.asarray(img_batch), np.asarray(mel_batch)
@@ -218,7 +218,7 @@ model = load_model(args.checkpoint_path)
 def main():
 	if not os.path.isdir(args.results_dir): os.makedirs(args.results_dir)
 	if not os.path.isdir(GENERATED_FRAMES_DIR): os.mkdir(GENERATED_FRAMES_DIR)
-	 if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
+	if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
 
 	if args.mode == 'dubbed':
 		files = listdir(args.data_root)
