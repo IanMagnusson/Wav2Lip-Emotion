@@ -11,6 +11,7 @@ import audio
 import face_detection
 from models import Wav2Lip
 from scripts.mask_preprocessed_images import mask_img
+import uuid
 
 parser = argparse.ArgumentParser(description='Code to generate results on ReSyncED evaluation set')
 
@@ -216,6 +217,7 @@ def load_model(path):
 model = load_model(args.checkpoint_path)
 
 def main():
+	RUN_ID = str(uuid.uuid4)
 	if not os.path.isdir(args.results_dir): os.makedirs(args.results_dir)
 	if not os.path.isdir(GENERATED_FRAMES_DIR): os.mkdir(GENERATED_FRAMES_DIR)
 	if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
@@ -241,7 +243,7 @@ def main():
 		audio_in = '_'.join(audio_in.split('/'))
 		video_in = '_'.join(video_in.split('/'))
 
-		temp_audio = f'../temp/temp{args.gpu_id}.wav'
+		temp_audio = f'../temp/temp{RUN_ID}.wav'
 		command = 'ffmpeg -loglevel panic -y -i {} -strict -2 {}'.format(audio_src, temp_audio)
 		subprocess.call(command, shell=True)
 
@@ -306,7 +308,7 @@ def main():
 		batch_size = args.wav2lip_batch_size
 		gen = datagen(full_frames.copy(), face_det_results, mel_chunks)
 
-		temp_video = f'../temp/result{args.gpu_id}.avi'
+		temp_video = f'../temp/result{RUN_ID}.avi'
 		frame_idx = 0
 		for i, (img_batch, mel_batch, frames, coords) in enumerate(gen):
 			if i == 0:

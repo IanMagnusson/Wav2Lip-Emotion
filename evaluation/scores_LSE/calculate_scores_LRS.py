@@ -7,6 +7,7 @@ import os
 from tqdm import tqdm
 
 from SyncNetInstance_calc_scores import *
+import uuid
 
 # ==================== LOAD PARAMS ====================
 
@@ -18,7 +19,7 @@ parser.add_argument('--batch_size', type=int, default='20', help='');
 parser.add_argument('--vshift', type=int, default='15', help='');
 parser.add_argument('--data_root', type=str, required=True, help='');
 parser.add_argument('--tmp_dir', type=str, default="data/work/pytmp", help='');
-parser.add_argument('--reference', type=str, default="demo", help='');
+parser.add_argument('--reference', type=str, default=f"demo{str(uuid.uuid4())}", help='');
 
 opt = parser.parse_args();
 
