@@ -217,7 +217,7 @@ def load_model(path):
 model = load_model(args.checkpoint_path)
 
 def main():
-	RUN_ID = str(uuid.uuid4)
+	RUN_ID = str(uuid.uuid4())
 	if not os.path.isdir(args.results_dir): os.makedirs(args.results_dir)
 	if not os.path.isdir(GENERATED_FRAMES_DIR): os.mkdir(GENERATED_FRAMES_DIR)
 	if args.save_gt_frames and not os.path.isdir(GT_FRAMES_DIR): os.mkdir(GT_FRAMES_DIR)
@@ -341,8 +341,10 @@ def main():
 								temp_video, vid)
 		subprocess.call(command, shell=True)
 
-	with open(os.path.join(args.results_dir, f'failed_videos{args.gpu_id}.txt'), 'w') as fout:
-		fout.writelines(failed_videos)
+	if len(failed_videos) > 0:
+		print(f'Warning! {len(failed_videos)} videos failed to generate')
+		with open(os.path.join(args.results_dir, f'failed_videos{args.gpu_id}.txt'), 'w') as fout:
+			fout.writelines(failed_videos)
 
 if __name__ == '__main__':
 	main()
