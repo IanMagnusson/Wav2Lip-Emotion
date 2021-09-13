@@ -4,7 +4,7 @@ import os
 def get_image_list(data_root, split):
 	filelist = []
 
-	with open('filelists/{}.txt'.format(split)) as f:
+	with open('filelists/MEAD/{}.txt'.format(split)) as f:
 		for line in f:
 			line = line.strip()
 			if ' ' in line: line = line.split()[0]
@@ -123,6 +123,7 @@ hparams = HParams(
 )
 
 assert (hparams.syncnet_wt + hparams.syncnet_warmup_wt_increase + hparams.disc_wt + hparams.l1_wt + hparams.affect_wt) == 1.0
+assert bool(hparams.disc_min_grad_norm) == bool(hparams.disc_max_grad_norm)
 
 def hparams_debug_string():
 	values = hparams.values()
