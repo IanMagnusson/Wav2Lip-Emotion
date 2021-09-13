@@ -52,7 +52,6 @@ dimension of the video can drop to as a result of adjusting for the face size.
     cp *.py syncnet_python/
     cp *.sh syncnet_python/ 
 ```
-**Note: We will release the test filelists for LRW, LRS2 and LRS3 shortly once we receive permission from the dataset creators. We will also release the Real World Dataset we have collected shortly.**
 
 * Our evaluation technique does not require ground-truth of any sorts. Given lip-synced videos we can directly calculate the scores from only the generated videos. Please store the generated videos (from our test sets or your own generated videos) in the following folder structure.
 ```
@@ -64,20 +63,10 @@ video data root (Folder containing all videos)
 cd syncnet_python
 ```
 
-* To run evaluation on the ReSynced dataset or your own generated videos, please run the following command:
+* To run evaluation on LRS or MEAD videos, please run the following command:
 ```
-sh calculate_scores_real_videos.sh /path/to/video/data/root /path/to/file/to/place/scores <gpu id number>
+python calculate_scores_LRS.py --data_root /path/to/video/data/root
 ```
-* This will generate LSE-D and LSE-C scores on the videos in the first arg and output them in that order, with a pair of
-scores per video on a line, in a file at the second arg
-
-#### Notes on calculate_scores_real_videos.sh
-(written by Ian)
-
-some assumptions set inside the syncnet repo code invoked by this script may cause the script to silently fail and output
-an empty file of scores. These assumed arguments are set in `syncnet_python/run_pipeline.py`. Of note are: 
-`--min_track` which should be lowered if input videos are short. `--min_face_size` which should be lowered if input videos
-are small size. The `calculate_scores_real_videos.sh` has been modified to provide reasonable defualts but may still require tuning
 
 # Evaluation of image quality using FID metric.
 First install the metric
