@@ -19,6 +19,6 @@ RUN apt-get install -y libgtk-3-dev
 RUN apt-get install -y libboost-all-dev
 
 # addditonal dependencies for scripts
-RUN apt-get install -y paralell
+RUN apt-get install -y parallel
 RUN apt-get install -y pv
 RUN apt-get install -y imagemagick
