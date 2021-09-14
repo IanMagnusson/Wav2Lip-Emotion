@@ -20,9 +20,9 @@ from glob import glob
 import os, random, cv2, argparse
 from hparams import hparams, get_image_list
 
-parser = argparse.ArgumentParser(description='Code to train the Wav2Lip model WITH the visual quality discriminator')
+parser = argparse.ArgumentParser(description='Code to train the Wav2Lip-Emotion model based on Wav2Lip by Prajwal  et  al. (2020),')
 
-parser.add_argument("--data_root", help="Root folder of the preprocessed LRS2 dataset", required=True, type=str)
+parser.add_argument("--data_root", help="Root folder of the preprocessed dataset", required=True, type=str)
 parser.add_argument("--dest_affect_root",
     help="Root folder of the preprocessed data for the destination affect you are trying to generate", type=str)
 parser.add_argument('--checkpoint_dir', help='Save checkpoints to this directory', required=True, type=str)
