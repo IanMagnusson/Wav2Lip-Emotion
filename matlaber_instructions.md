@@ -1,17 +1,15 @@
-# emotion-synthesis
-A term project for 6.869 2021 by Aruna and Ian
+# Instructions for use on matlaber compute cluster
+based on https://nuwiki.media.mit.edu/bin/view/Main/NvidiaDocker
 
-## setup
-### download
-This setup assumes you are on a matlaber machine
+## Login and clone
+### (note capitalization)
 ```
-# (note capitalization)
 kinit -l 48h -r 10d -f user_name@MEDIA.MIT.EDU
-ssh -K username@matlaber1.media.mit.edu
-git clone https://github.com/jagnusson/emotion-synthesis.git
+ssh -K username@matlaber*.media.mit.edu
+git clone https://github.com/jagnusson/Wav2Lip-Emotion.git
 ```
 
-### docker
+## docker
 
 ```
 # get YOUR_UID (you will need this later)
@@ -51,32 +49,9 @@ docker rmi $(whoami)/<image name>-<version tag>
 ```
 
 ```
-# now you can move your ~tensorflow-1.tar.gz export to another machine or just import it on another matlaber
+# now you can move your ~t<image name>-<version tag>.tar.gz export to another machine or just import it on another matlaber
 docker load -i ~/<image name>-<version tag>.tar.gz
 docker run --shm-size 16g -dit -v /mas:/mas -v /u:/u -v /dtmp:/dtmp -v /tmp:/tmp --name $(whoami)-<image name>-<version tag> $(whoami)/<image name>-<version tag>
 # I recommend removing your image immediately after
 docker rmi $(whoami)/<image name>-<version tag>
 ```
-
-## Setup on EC2
-Most of the setup is similar on EC2, but you need to expose the GPUs and you don't want to run the userspace setup.
-
-To expose the GPUs run the container like this:
-```
-docker run --gpus all -dit --name $(whoami)-<image name>-<version tag> <image name>:<version tag>
-```
-Confusingly this doesn't work on matlaber, and the gpus run fine without it. This was taken from https://towardsdatascience.com/how-to-properly-use-the-gpu-within-a-docker-container-4c699c78c6d1
-
-## Demo to verify
-Try out simple wav2lip inference to test that everything is working alright. Sample data and model weights are from [this google drive](https://drive.google.com/drive/folders/1I-0dNLfFOSFwrfqjNa-SXuwaURHE5K4k)
-
-```
-pip3 install gdown
-# gdown ids are gotten from the sharing link
-gdown --id 1bYX03oZHuvNKHWeQ46xLqTrs7miGvIno
-gdown --id 1XIHCyHdP6YH1f2ShtaF9BfV3BTeLWD-V
-gdown --id 1_OvqStxNxLc7bXzlaVG5sz695p-FVfYY
-python3 inference.py --checkpoint_path wav2lip_gan.pth --face input_vid.mp4 --audio input_audio.wav
-```
-This will output a file `results/result_voice.mp4`. Use `scp -o GSSAPIAuthentication=yes username@matlaber*.media.mit.edu:/u/username/emotion-synthesis/results/result_voice.mp4` to get this locally to look at. Inference should complete quickly if gpu is working correctly (check this to make sure that its not running on CPU; the device uses is printed out at the beginning of the command).
-
