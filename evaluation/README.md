@@ -1,74 +1,58 @@
-# Novel Evaluation Framework, new filelists, and using the LSE-D and LSE-C metric.
-
-Our paper also proposes a novel evaluation framework (Section 4). To evaluate on LRS2, LRS3, and LRW, the filelists are present in the `test_filelists` folder. Please use `gen_videos_from_filelist.py` script to generate the videos for LR* data and use `real_videos_inference.py` to generate videos from other sources. After that, you can calculate the LSE-D and LSE-C scores using the instructions below. Please see [this thread](https://github.com/Rudrabha/Wav2Lip/issues/22#issuecomment-712825380) on how to calculate the FID scores. 
-
-The videos of the ReSyncED benchmark for real-world evaluation will be released soon. 
-
-### Steps to set-up the evaluation repository for LSE-D and LSE-C metric:
-We use the pre-trained syncnet model available in this [repository](https://github.com/joonson/syncnet_python). 
-
-* Clone the SyncNet repository.
-``` 
-git clone https://github.com/joonson/syncnet_python.git 
-```
-* Follow the procedure given in the above linked [repository](https://github.com/joonson/syncnet_python) to download the pretrained models and set up the dependencies. 
-    * **Note: Please install a separate virtual environment for the evaluation scripts. The versions used by Wav2Lip and the publicly released code of SyncNet is different and can cause version mis-match issues. To avoid this, we suggest the users to install a separate virtual environment for the evaluation scripts**
-```
-cd syncnet_python
-pip install -r requirements.txt
-sh download_model.sh
-```
-* The above step should ensure that all the dependencies required by the repository is installed and the pre-trained models are downloaded.
-### Generating videos from filelists
-(written by Ian)
+# Novel automatic evaluation for emotion modification as well as sync, and visual quality evaluation 
+## generating videos from filelists for use in evaluation
 
 There are two scripts for generating videos en-mass: `gen_videos_from_filelist.py` and `real_videos_inference.py`.
-`gen_videos_from_filelist.py` can be used with LRS2 data and the provided test filelists. But for generating videos based on MEAD iputs we will use the affect mode in `real_videos_inference.py`. This allows both the audio and video of the input video to be used as input to the generator, allowing only the affect of the input to be changed.
+`gen_videos_from_filelist.py` can be used with LRS2 data and the provided test filelists. But for generating videos based on MEAD iputs we will use the `affect` mode in `real_videos_inference.py`. This allows both the audio and video of the input video to be used as input to the generator, allowing only the affect of the input to be changed.
 ```
 python3 real_videos_inference.py --mode affect 
-                                 --filelist <path to filelist>
+                                 --filelist test_filelists/mead/<source emotion>.txt
                                  --results_dir <path to where you want videos to go>
                                  --data_root <path to actual videos to input to generator model>
                                  --checkpoint_path <path to model weights>
                                  --face_res 96
                                  --min_frame_res 160
 ```
-The filelist needs to contain line separated filenames of the videos as they are within the `--data_root`, for example
-```
-001.mp4
-002.mp4
-```
-The script is invoked in `dubbed` mode because this will run the nodel on the video and audio from each file without swapping
-the audio around. Thus the outputs will just be the same audio but with affect changed.
+Additionally use the `--full_mask` flag if you are working with a model which utilizes the full masking strategy, and use the `--save_gt_frames` if you wish to save the individual frames of the ground truth data for use in the FID visual quality evaluation later.
 
 The face_res automatically adjusts the face video resolution so that the detected face (as judged by the first video frame)
 is approximately face_res size in its longest dimension. Meanwhile min_frame_res sets the minimum size that the smallest
 dimension of the video can drop to as a result of adjusting for the face size.
 
-### Running the evaluation scripts:
-* Copy our evaluation scripts given in this folder to the cloned repository.
-```  
-    cd Wav2Lip/evaluation/scores_LSE/
-    cp *.py syncnet_python/
-    cp *.sh syncnet_python/ 
-```
+## evaluation of emotion modification
+Our approach makes use of [NISL2020](https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA) for pre-frame valence and arousal judgements which we then use to judge the impact of our emotion modification on these affect measures. We normalize the change in valence and arousal by the baseline change in human expressions of the source and destination emotions in MEAD dataset. Further details can be found in [our paper](../literature/ADGD_2021_Wav2Lip-emotion.pdf).
 
-* Our evaluation technique does not require ground-truth of any sorts. Given lip-synced videos we can directly calculate the scores from only the generated videos. Please store the generated videos (from our test sets or your own generated videos) in the following folder structure.
+You will need to set up NISL2020 following the instructions in their repo and then get the average valence and arousal scores over all frames in each video for the generated videos as well as the source and destination emotion ground truth inputs and targets from the MEAD dataset. These will allow you to use the `aggregate_affects.py` script to compute the final normalized change in valence and arousal scores.
+
+## Sync metrics
+We utilize the LSE-D and LSE-C metrics proposed by Prajwal  et  al. (2020). They use the pre-trained syncnet model:
+``` 
+git clone https://github.com/joonson/syncnet_python.git 
 ```
-video data root (Folder containing all videos)
-├── All .mp4 files
-```
-* Change the folder back to the cloned repository. 
+Set up the pretrained models and dependencies per the instructions in the repo using a seperate python environment. If you are using the docker and python packages provided in the root of this repo you can use pipenv as follows:
 ```
 cd syncnet_python
+python3 -m pipenv install -r requirements.txt
+python3 -m pipenv install tqdm
+pipenv shell
+sh download_model.sh
 ```
 
-* To run evaluation on LRS or MEAD videos, please run the following command:
+### Running the evaluation scripts:
+Copy the evaluation scripts to the cloned repository.
+```  
+    cp ../scores_LSE/*.py ./
+    cp ../scores_LSE/*.sh ./ 
 ```
-python calculate_scores_LRS.py --data_root /path/to/video/data/root
+
+To run sync evaluation on a directory of .mp4 videos generated on LRS or MEAD inputs, please run the following command:
+```
+python calculate_sync_scores.py --data_root <dir with generated .mp4 videos to evaluate>
 ```
 
 # Evaluation of image quality using FID metric.
+
+Please see [this thread](https://github.com/Rudrabha/Wav2Lip/issues/22#issuecomment-712825380) in the original authors repo and [this thread](https://github.com/jagnusson/Wav2Lip-Emotion/issues/2) in our repo for more detail this use of FID scores for video visual quality assesment. 
+
 First install the metric
 ```
 pip install pytorch-fid
@@ -77,15 +61,11 @@ pip install pytorch-fid
 Then to get the FID score between two sets of videos, we use the folders of cropped face images generated by the inference generation scripts
 (note: the ground truth frames will only be saved when --save_gt_frames is enabled on these). The folders will be output in the results dir.
 ```
-python -m pytorch_fid /path/to/face/crops/dir1 /path/to/face/crops/dir1 --device <your gpu such as cuda:0>
+python -m pytorch_fid <dir with face crops from one condition> <dir with face crops from another condition> --device <your gpu such as cuda:0>
 ```
 
-
-# Opening issues related to evaluation scripts
-* Please open the issues with the "Evaluation" label if you face any issues in the evaluation scripts. 
-
 # Acknowledgements
-Our evaluation pipeline in based on two existing repositories. LSE metrics are based on the [syncnet_python](https://github.com/joonson/syncnet_python) repository and the FID score is based on [pytorch-fid](https://github.com/mseitzer/pytorch-fid) repository. We thank the authors of both the repositories for releasing their wonderful code.
+Like Wav2Lip original, our sync and visual quality evaluation pipelines are based on two existing repositories. LSE metrics are based on the [syncnet_python](https://github.com/joonson/syncnet_python) repository and the FID score is based on [pytorch-fid](https://github.com/mseitzer/pytorch-fid) repository. Additionally our novel automatic evaluation for emotion modification makes use of the [NISL2020](https://github.com/wtomin/A-Multitask-Solution-for-FAU-EXPR-VA) repository. We thank the authors of these repositories for releasing their code!
 
 
 
