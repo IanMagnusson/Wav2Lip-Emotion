@@ -18,7 +18,7 @@ import numpy as np
 
 import face_detection
 
-MODEL_PATH = "/u/ianmag/emotion-synthesis/shape_predictor_81_face_landmarks.dat"
+MODEL_PATH = "../checkpoints/shape_predictor_81_face_landmarks.dat"
 predictor = dlib.shape_predictor(MODEL_PATH)
 
 def mask_img(img):
