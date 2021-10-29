@@ -1,6 +1,6 @@
 # Lit review
 
-## [Our ADGD @ ACMMM 2021 paper](https://github.com/jagnusson/Wav2Lip-Emotion/blob/main/literature/ADGD_2021_Wav2Lip-emotion.pdf)
+## [Our ADGD @ ACMMM 2021 paper](https://github.com/jagnusson/Wav2Lip-Emotion/blob/main/literature/Wav2Lip-Emotion_updated.pdf)
 - We extend wav2lip to modify facial expressions of emotions via l1 reconstruction and pre-trained emotion objectives.
 - We propose a novel automatic evaluation for emotion modification corroborated with a user study. 
 
