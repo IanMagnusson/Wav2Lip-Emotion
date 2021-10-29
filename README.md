@@ -1,6 +1,6 @@
 # Wav2Lip-Emotion
 
-### ADGD @ ACM Multimedia 2021 [paper](literature/ADGD_2021_Wav2Lip-emotion.pdf)
+### ADGD @ ACM Multimedia 2021 [paper](literature/Wav2Lip-Emotion_updated.pdf)
 
 ![alt text](literature/teaser_fig.jpg)
 
