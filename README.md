@@ -30,7 +30,11 @@ pip3 install -r requirements.txt
 ```
 
 ## model checkpoints
-Model checkpoints will be released soon for our finished models, as well as our re-trainings of Wav2Lip original with modified masking strategy and visual quality descriminator to account for expressions of emotion in the full face. Other model checkpoints to be aware of are the [lipsync expert](https://iiitaphyd-my.sharepoint.com/:u:/g/personal/radrabha_m_research_iiit_ac_in/EQRvmiZg-HRAjvI6zqN9eTEBP74KefynCwPWVmF57l-AYA?e=ZRPHKP) used by Wav2Lip provided by the original authors, the [pre-trained emotion objective](https://drive.google.com/file/d/1f8wUtQj-UatrZtCnkJFcB--X2eJS1m_N/view) from Pham, Vu, and Tran (2021), and the [facial landmark detector](https://github.com/codeniko/shape_predictor_81_face_landmarks/blob/master/shape_predictor_81_face_landmarks.dat) which we use for full face masking. These model checkpoints are necissary if you with to train the model yourself as described in the next section, and should be placed in the `checkpoints` dir.
+The Wav2Lip-Emotion model checkpoints can be found [here](https://www.dropbox.com/sh/aodu9umsopw2nyw/AADnM1joXDnDgvXDKiV3JTG3a?dl=0).
+
+Each experiment is named as `mead_{source emotion}2{target emotion}_{half or full mask}_{emotion modification strategy}`. The absense of an emotion strategy suffix means it uses both l1 and emotion objective. `l1_only` means the emotion objective is ablated and `src_affect_only` means the emotion modification effect of l1 is ablated by using the same emotion for inputs and targets. Logs for the trainings are also included.
+
+Other model checkpoints to be aware of are the [lipsync expert](https://iiitaphyd-my.sharepoint.com/:u:/g/personal/radrabha_m_research_iiit_ac_in/EQRvmiZg-HRAjvI6zqN9eTEBP74KefynCwPWVmF57l-AYA?e=ZRPHKP) used by Wav2Lip provided by the original authors, the [pre-trained emotion objective](https://drive.google.com/file/d/1f8wUtQj-UatrZtCnkJFcB--X2eJS1m_N/view) from Pham, Vu, and Tran (2021), and the [facial landmark detector](https://github.com/codeniko/shape_predictor_81_face_landmarks/blob/master/shape_predictor_81_face_landmarks.dat) which we use for full face masking. These model checkpoints are necissary if you wish to train the model yourself as described in the next section, and should be placed in the `checkpoints` dir.
 
 ## train it yourself
 ### pre-processing
@@ -58,4 +62,3 @@ Further hyperparameters such as task weights are present in `hparams.py`. Ensure
 
 ## Evaluation
 For details on evaluation see the readme in side the evaluation directory.
-
