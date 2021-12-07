@@ -59,3 +59,8 @@ Further hyperparameters such as task weights are present in `hparams.py`. Ensure
 ## Evaluation
 For details on evaluation see the readme in side the evaluation directory.
 
+## Model weights and logs
+You can find the model weights and logs for different experiments we ran out here:
+The experiment is named like `mead_{source emotion}2{target emotion}_{half or full mask}_{loss filter}
+https://www.dropbox.com/sh/aodu9umsopw2nyw/AADnM1joXDnDgvXDKiV3JTG3a?dl=0
+
