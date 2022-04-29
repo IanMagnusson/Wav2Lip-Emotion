@@ -65,7 +65,7 @@ For details on evaluation see the readme in side the evaluation directory.
 
 ## License and Citation
 
-This repository can only be used for personal/research/non-commercial purposes. It is derived from [Wav2Lip](https://github.com/Rudrabha/Wav2Lip#license-and-citation) which imposes the same restrictions. Please cite the following paper if you use this repository:
+This repository can only be used for personal/research/non-commercial purposes. It is derived from [Wav2Lip](https://github.com/Rudrabha/Wav2Lip#license-and-citation) which imposes the same restrictions.  Please cite following papers for Wav2Lip-Emotion and Wav2Lip if you use this repository:
 ```
 @inproceedings{10.1145/3476099.3484317,
 author = {Magnusson, Ian and Sankaranarayanan, Aruna and Lippman, Andrew},
