@@ -62,3 +62,45 @@ Further hyperparameters such as task weights are present in `hparams.py`. Ensure
 
 ## Evaluation
 For details on evaluation see the readme in side the evaluation directory.
+
+## License and Citation
+
+This repository can only be used for personal/research/non-commercial purposes. It is derived from [Wav2Lip](https://github.com/Rudrabha/Wav2Lip#license-and-citation) which imposes the same restrictions. Please cite the following paper if you use this repository:
+```
+@inproceedings{10.1145/3476099.3484317,
+author = {Magnusson, Ian and Sankaranarayanan, Aruna and Lippman, Andrew},
+title = {Invertable Frowns: Video-to-Video Facial Emotion Translation},
+year = {2021},
+isbn = {9781450386821},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3476099.3484317},
+doi = {10.1145/3476099.3484317},
+booktitle = {Proceedings of the 1st Workshop on Synthetic Multimedia - Audiovisual Deepfake Generation and Detection},
+pages = {25–33},
+numpages = {9},
+keywords = {video-to-video translation, computer vision, evaluation, deep learning, emotion, facial expression, video manipulation},
+location = {Virtual Event, China},
+series = {ADGD '21}
+}
+
+```
+
+```
+@inproceedings{10.1145/3394171.3413532,
+author = {Prajwal, K R and Mukhopadhyay, Rudrabha and Namboodiri, Vinay P. and Jawahar, C.V.},
+title = {A Lip Sync Expert Is All You Need for Speech to Lip Generation In the Wild},
+year = {2020},
+isbn = {9781450379885},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3394171.3413532},
+doi = {10.1145/3394171.3413532},
+booktitle = {Proceedings of the 28th ACM International Conference on Multimedia},
+pages = {484–492},
+numpages = {9},
+keywords = {lip sync, talking face generation, video generation},
+location = {Seattle, WA, USA},
+series = {MM '20}
+}
+```
